@@ -10,22 +10,30 @@ import {
   PlusIcon,
   CalendarIcon,
   BarChartIcon,
+  DoorOpenIcon,
+  MenuIcon,
+  XIcon,
+  CheckCircleIcon,
+  ClockIcon,
 } from './Icons'
 
-const dateLabel = new Date().toLocaleDateString('en-GB', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  timeZone: 'Africa/Lagos',
-})
-
-function formatEventDisplayDate(dateStr) {
+function formatLagosDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(`${dateStr}T12:00:00`)
   return d.toLocaleDateString('en-GB', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
+    timeZone: 'Africa/Lagos',
+  })
+}
+
+function formatFullHeaderDate() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
     timeZone: 'Africa/Lagos',
   })
 }
@@ -41,11 +49,16 @@ export default function Home({
   const [students, setStudents] = useState([])
   const [studentSearch, setStudentSearch] = useState('')
   const [showCreateEvent, setShowCreateEvent] = useState(false)
+  const [showAddStudent, setShowAddStudent] = useState(false)
   const [newEventTitle, setNewEventTitle] = useState('')
   const [newEventDate, setNewEventDate] = useState(today())
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [eventError, setEventError] = useState('')
   const [tableMissing, setTableMissing] = useState(false)
+
+  // Mobile navigation state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileTab, setMobileTab] = useState('events') // 'events' | 'students'
 
   // Add student form state
   const [name, setName] = useState('')
@@ -202,17 +215,27 @@ export default function Home({
         setAddError('Could not add the student. Try again.')
       }
     } else {
-      setAddMsg(`${cleanName} was added.`)
+      setAddMsg(`${cleanName} was added successfully.`)
       setName('')
       setMatricNo('')
       setDetail('')
       loadStudents()
-      setTimeout(() => setAddMsg(''), 4000)
+      setTimeout(() => {
+        setAddMsg('')
+        setShowAddStudent(false)
+      }, 1500)
     }
   }
 
   const first = (profile?.full_name || 'Teacher').split(' ')[0]
   const isPrincipal = profile?.role === 'principal'
+  const initials = (profile?.full_name || 'Teacher')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
 
   const todayStr = today()
   const todaysEvents = events.filter((e) => e.event_date === todayStr)
@@ -232,380 +255,608 @@ export default function Home({
   })
 
   return (
-    <div className="min-h-screen bg-mist">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-8">
+    <div className="min-h-screen bg-mist text-ink">
+      {/* Top Navigation Bar */}
+      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Brand />
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm font-medium text-ink/70 sm:block">
+
+          {/* Desktop & Tablet Navigation (>= 768px) */}
+          <div className="hidden items-center gap-2.5 md:flex">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-mist px-3 py-1 text-xs font-bold text-ink/75">
+              <span className={`h-2 w-2 rounded-full ${isPrincipal ? 'bg-brand' : 'bg-ink/40'}`} />
               {first} · {isPrincipal ? 'Principal' : 'Teacher'}
             </span>
 
             {isPrincipal && (
-              <div className="flex items-center gap-2">
+              <>
                 <button
+                  type="button"
                   onClick={onOpenDashboard}
-                  className="flex items-center gap-1.5 rounded-md border border-brand bg-brand/5 px-3 py-2 text-sm font-bold text-brand hover:bg-brand/10"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-brand bg-brand/5 px-3.5 py-2 text-xs font-extrabold text-brand transition-colors hover:bg-brand/10 active:scale-95"
                 >
                   <BarChartIcon className="h-4 w-4" /> Attendance dashboard
                 </button>
                 <button
+                  type="button"
                   onClick={onManageTeachers}
-                  className="hidden items-center gap-1.5 rounded-md border border-line bg-white px-3 py-2 text-sm font-bold text-ink hover:bg-mist sm:flex"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95"
                 >
-                  <UsersIcon className="h-4 w-4" /> Manage teachers
+                  <UsersIcon className="h-4 w-4 text-ink/60" /> Manage teachers
                 </button>
-              </div>
+              </>
             )}
 
             <button
+              type="button"
               onClick={() => supabase.auth.signOut()}
-              className="flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold hover:bg-mist"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3.5 py-2 text-xs font-bold text-ink/70 transition-colors hover:bg-mist hover:text-red-700 active:scale-95"
             >
-              <SignOutIcon className="h-4 w-4" /> Sign out
+              <SignOutIcon className="h-3.5 w-3.5" /> Sign out
+            </button>
+          </div>
+
+          {/* Mobile Menu Trigger (< 768px) */}
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+              className="flex items-center gap-2 rounded-xl border border-line bg-mist/60 px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[10px] font-black text-white">
+                {initials}
+              </span>
+              <span className="capitalize">{isPrincipal ? 'Principal' : 'Teacher'}</span>
+              <MenuIcon className="h-4 w-4 text-ink/60" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-8 sm:py-10 lg:grid-cols-5 lg:gap-10">
-        {/* Left Column: Greeting, Create Event & Add Student */}
-        <div className="space-y-6 lg:col-span-2">
-          <div>
-            <h1 className="text-2xl font-extrabold sm:text-3xl">Hello, {first}</h1>
-            <p className="mt-1 text-sm text-ink/60 sm:text-base">{dateLabel}</p>
+      {/* Main Content Dashboard */}
+      <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        {/* Database Migration Alert */}
+        {tableMissing && (
+          <div className="mb-6 rounded-2xl border border-sun bg-sun/15 p-4 text-xs font-semibold text-ink sm:p-5">
+            <p className="text-sm font-extrabold">Database setup required:</p>
+            <p className="mt-1 text-ink/80">
+              The events table has not been created yet in your Supabase database. Please execute the SQL migrations in your Supabase SQL editor.
+            </p>
           </div>
+        )}
 
-          {/* Principal Controls Card */}
-          {isPrincipal && (
-            <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 sm:p-5 shadow-2xs">
-              <div>
-                <h2 className="text-xs font-black uppercase tracking-wider text-brand">
-                  Principal Controls
-                </h2>
-                <p className="mt-0.5 text-xs text-ink/70">
-                  Attendance analytics, student rates, and teacher management.
-                </p>
+        {/* Welcome Banner & Action Bar */}
+        <section className="mb-6 rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">
+                  Hello, {first}
+                </h1>
+                <span className="rounded-full bg-mist px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-ink/70">
+                  {isPrincipal ? 'Principal' : 'Teacher'}
+                </span>
               </div>
-              <div className="mt-3.5 flex flex-wrap gap-2.5">
-                <button
-                  onClick={onOpenDashboard}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand px-3.5 py-2.5 text-xs font-bold text-white shadow-2xs hover:bg-brand-dark"
-                >
-                  <BarChartIcon className="h-4 w-4" /> Attendance dashboard
-                </button>
-                <button
-                  onClick={onManageTeachers}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line bg-white px-3.5 py-2.5 text-xs font-bold text-ink shadow-2xs hover:bg-mist"
-                >
-                  <UsersIcon className="h-4 w-4" /> Manage teachers
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Database Setup Alert if migration pending */}
-          {tableMissing && (
-            <div className="rounded-xl border border-sun/60 bg-sun/15 p-4 text-xs font-semibold text-ink">
-              <p className="font-extrabold">Setup needed:</p>
-              <p className="mt-1">
-                The events table has not been created yet in your Supabase database. Please run the SQL migration in Supabase SQL editor to enable events.
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-ink/60 sm:text-sm">
+                <ClockIcon className="h-3.5 w-3.5 text-ink/40" />
+                {formatFullHeaderDate()}
               </p>
             </div>
-          )}
 
-          {/* Create Event Trigger */}
-          <div className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold sm:text-xl">Events</h2>
-                <p className="mt-0.5 text-xs text-ink/60">
-                  Create an event to start an attendance room.
-                </p>
-              </div>
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-2.5">
               <button
+                type="button"
                 onClick={() => setShowCreateEvent(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-xs font-bold text-white shadow-2xs transition-all hover:bg-brand-dark active:scale-[0.98] sm:flex-initial sm:px-5 sm:py-2.5 sm:text-sm"
               >
                 <PlusIcon className="h-4 w-4" /> Create event
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddError('')
+                  setAddMsg('')
+                  setShowAddStudent(true)
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 py-3 text-xs font-bold text-ink shadow-2xs transition-all hover:bg-mist active:scale-[0.98] sm:flex-initial sm:px-5 sm:py-2.5 sm:text-sm"
+              >
+                <UserPlusIcon className="h-4 w-4 text-ink/70" /> Add student
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* Add a Student Form */}
-          <section className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-bold">
-              <UserPlusIcon /> Add a student
-            </h2>
-            <form onSubmit={addStudent} className="mt-4 space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-ink" htmlFor="add-student-name">
-                  Full name
-                </label>
-                <input
-                  id="add-student-name"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Samuel Ade"
-                  className="mt-1 w-full rounded-md border border-line px-4 py-2.5 text-sm focus:border-brand"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-ink" htmlFor="add-student-matric">
-                  Matric number <span className="font-normal text-ink/50">(can be added later)</span>
-                </label>
-                <input
-                  id="add-student-matric"
-                  value={matricNo}
-                  onChange={(e) => setMatricNo(e.target.value)}
-                  placeholder="e.g. FFS-042"
-                  className="mt-1 w-full rounded-md border border-line px-4 py-2.5 text-sm focus:border-brand"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-ink" htmlFor="add-student-detail">
-                  Detail <span className="font-normal text-ink/50">(optional)</span>
-                </label>
-                <input
-                  id="add-student-detail"
-                  value={detail}
-                  onChange={(e) => setDetail(e.target.value)}
-                  placeholder="e.g. Senior class or age group"
-                  className="mt-1 w-full rounded-md border border-line px-4 py-2.5 text-sm focus:border-brand"
-                />
-              </div>
-
-              {addError && <p className="text-sm font-semibold text-red-700">{addError}</p>}
-              {addMsg && <p className="text-sm font-semibold text-brand">{addMsg}</p>}
-
-              <button
-                disabled={savingStudent}
-                className="w-full rounded-md bg-ink px-5 py-3 font-bold text-white hover:bg-ink/90 disabled:opacity-50"
-              >
-                {savingStudent ? 'Saving student…' : 'Save student'}
-              </button>
-            </form>
-          </section>
-        </div>
-
-        {/* Right Column: Events Summary & All Students */}
-        <div className="space-y-8 lg:col-span-3">
-          {/* Section 1: Today's Events & Summary */}
-          <section>
-            <div className="flex items-baseline justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-ink">Today&apos;s events</h2>
-                <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-extrabold text-ink">
-                  {todaysEvents.length}
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Summary Card if events exist today */}
-            {todaysEvents.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-line bg-white p-3.5 shadow-sm">
-                  <p className="text-xs font-bold text-ink/60">Sessions Today</p>
-                  <p className="mt-1 text-2xl font-extrabold text-ink">{todaysEvents.length}</p>
+        {/* Live Attendance Room Banner (if room is open today) */}
+        {openRoomToday && (
+          <section className="mb-6 overflow-hidden rounded-2xl border-2 border-ok/30 bg-gradient-to-r from-ok/10 via-ok/5 to-white p-5 shadow-2xs sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 rounded-full bg-ok/20 px-3 py-1 text-xs font-extrabold text-ok">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-ok" />
+                  </span>
+                  Attendance Room Is Live
                 </div>
-                <div className="rounded-lg border border-line bg-white p-3.5 shadow-sm">
-                  <p className="text-xs font-bold text-ink/60">Total Checked In</p>
-                  <p className="mt-1 text-2xl font-extrabold text-brand">{totalPresentToday}</p>
-                </div>
-                <div className="col-span-2 sm:col-span-1 rounded-lg border border-line bg-white p-3.5 shadow-sm">
-                  <p className="text-xs font-bold text-ink/60">Attendance Room</p>
-                  <p className="mt-1 text-sm font-bold text-ink truncate">
-                    {openRoomToday ? (
-                      <span className="inline-flex items-center gap-1.5 text-ok font-extrabold">
-                        <span className="h-2 w-2 rounded-full bg-ok animate-pulse" />
-                        Room open
-                      </span>
-                    ) : (
-                      <span className="text-ink/60">All rooms closed</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {todaysEvents.length === 0 ? (
-              <div className="mt-3 rounded-xl border border-dashed border-line bg-white p-6 text-sm text-ink/60">
-                <p className="font-semibold text-ink">No events scheduled for today.</p>
-                <p className="mt-1 text-xs text-ink/60">
-                  Tap &quot;Create event&quot; to schedule a class session and open its attendance room.
+                <h2 className="text-xl font-black text-ink sm:text-2xl">
+                  {openRoomToday.title}
+                </h2>
+                <p className="text-xs font-semibold text-ink/65 sm:text-sm">
+                  <span className="font-bold text-ok">{openRoomToday.attendance?.length || 0} students</span> currently marked present.
                 </p>
               </div>
-            ) : (
-              <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-white shadow-sm">
-                {todaysEvents.map((evt) => {
-                  const presentCount = evt.attendance?.length || 0
 
-                  return (
-                    <li
-                      key={evt.id}
-                      onClick={() => onSelectEvent(evt)}
-                      className="flex cursor-pointer items-center justify-between gap-3 p-4 transition-colors hover:bg-mist/60 sm:px-6 sm:py-5"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2.5">
-                          <p className="truncate font-extrabold text-ink text-base sm:text-lg">
-                            {evt.title}
-                          </p>
-                          {evt.status === 'open' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/15 px-2.5 py-0.5 text-xs font-extrabold text-ok">
-                              <span className="h-2 w-2 rounded-full bg-ok animate-pulse" />
-                              Room open
-                            </span>
-                          )}
-                          {evt.status === 'scheduled' && (
-                            <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink/60">
-                              Scheduled
-                            </span>
-                          )}
-                          {evt.status === 'closed' && (
-                            <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink/50">
-                              Closed
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-ink/60">
-                          <span className="font-bold text-brand">{presentCount}</span> student
-                          {presentCount === 1 ? '' : 's'} present
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-ink/70">
-                        <span>Open event</span>
-                        <ChevronRightIcon className="h-4 w-4 text-ink/40" />
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
+              <button
+                type="button"
+                onClick={() => onSelectEvent(openRoomToday)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-ok px-5 py-3.5 text-sm font-extrabold text-white shadow-md transition-all hover:bg-ok/90 active:scale-[0.98]"
+              >
+                <DoorOpenIcon className="h-5 w-5" /> Open Room Kiosk
+                <ChevronRightIcon className="h-4 w-4" />
+              </button>
+            </div>
           </section>
+        )}
 
-          {/* Section 2: Past Events */}
-          <section>
-            <div className="flex items-baseline justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-ink">Past events</h2>
-                <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-extrabold text-ink">
-                  {pastEvents.length}
-                </span>
+        {/* Mobile Segmented Control Tab Switcher (< 1024px) */}
+        <div className="mb-6 flex rounded-2xl border border-line bg-white p-1.5 shadow-2xs lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileTab('events')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold transition-all ${
+              mobileTab === 'events'
+                ? 'bg-brand text-white shadow-xs'
+                : 'text-ink/65 hover:text-ink'
+            }`}
+          >
+            <CalendarIcon className="h-4 w-4" />
+            Class Sessions ({todaysEvents.length + pastEvents.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('students')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold transition-all ${
+              mobileTab === 'students'
+                ? 'bg-brand text-white shadow-xs'
+                : 'text-ink/65 hover:text-ink'
+            }`}
+          >
+            <UsersIcon className="h-4 w-4" />
+            Students Roster ({students.length})
+          </button>
+        </div>
+
+        {/* Responsive Dashboard Grid */}
+        <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+          {/* COLUMN 1: SESSIONS & EVENTS (7 cols on Desktop) */}
+          <div
+            className={`space-y-6 lg:col-span-7 ${
+              mobileTab !== 'events' ? 'hidden lg:block' : ''
+            }`}
+          >
+            {/* Section: Today's Events */}
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
+              <div className="flex items-center justify-between border-b border-line pb-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-ink sm:text-xl">
+                    Today&apos;s Sessions
+                  </h2>
+                  <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-extrabold text-ink/70">
+                    {todaysEvents.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateEvent(true)}
+                  className="text-xs font-bold text-brand hover:underline"
+                >
+                  + New session
+                </button>
               </div>
-            </div>
 
-            {pastEvents.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-dashed border-line bg-white p-6 text-sm text-ink/60">
-                No past events recorded yet.
-              </p>
-            ) : (
-              <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-white shadow-sm">
-                {pastEvents.slice(0, 8).map((evt) => {
-                  const presentCount = evt.attendance?.length || 0
+              {/* Quick Summary Pill Row if events exist */}
+              {todaysEvents.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-line bg-mist/40 p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                      Sessions Today
+                    </p>
+                    <p className="mt-1 text-xl font-black text-ink">{todaysEvents.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-line bg-mist/40 p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                      Total Checked In
+                    </p>
+                    <p className="mt-1 text-xl font-black text-brand">{totalPresentToday}</p>
+                  </div>
+                  <div className="col-span-2 rounded-xl border border-line bg-mist/40 p-3 sm:col-span-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                      Room Status
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-ink">
+                      {openRoomToday ? (
+                        <span className="inline-flex items-center gap-1.5 font-extrabold text-ok">
+                          <span className="h-2 w-2 rounded-full bg-ok" />
+                          Live & open
+                        </span>
+                      ) : (
+                        <span className="text-ink/60">No rooms open</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-                  return (
-                    <li
-                      key={evt.id}
-                      onClick={() => onSelectEvent(evt)}
-                      className="flex cursor-pointer items-center justify-between gap-3 p-4 transition-colors hover:bg-mist/60 sm:px-6"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-bold text-ink">{evt.title}</p>
-                          <span className="rounded bg-mist px-2 py-0.5 text-xs font-semibold text-ink/60">
-                            {formatEventDisplayDate(evt.event_date)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-ink/60">
-                          <span className="font-bold text-ink">{presentCount}</span> present ·{' '}
-                          <span className="capitalize">{evt.status}</span>
-                        </p>
-                      </div>
-                      <ChevronRightIcon className="h-4 w-4 shrink-0 text-ink/40" />
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </section>
-
-          {/* Section 3: All Students List */}
-          <section>
-            <div className="flex items-baseline justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-ink">All students</h2>
-                <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-extrabold text-ink">
-                  {students.length}
-                </span>
-              </div>
-            </div>
-
-            <div className="relative mt-3">
-              <SearchIcon className="absolute left-3.5 top-3.5 h-4 w-4 text-ink/40" />
-              <input
-                value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
-                placeholder="Search by name or matric number…"
-                className="w-full rounded-md border border-line bg-white py-2.5 pl-10 pr-4 text-sm focus:border-brand"
-              />
-            </div>
-
-            {students.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-dashed border-line bg-white p-6 text-sm text-ink/60">
-                No students added yet. Use the form on the left to add your first student.
-              </p>
-            ) : filteredStudents.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-dashed border-line bg-white p-6 text-sm text-ink/60">
-                No students found matching &quot;{studentSearch}&quot;.
-              </p>
-            ) : (
-              <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-white shadow-sm">
-                {filteredStudents.map((s) => (
-                  <li
-                    key={s.id}
-                    onClick={() => onSelectStudent?.(s)}
-                    className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-mist/60"
+              {/* Today's Events List */}
+              {todaysEvents.length === 0 ? (
+                <div className="mt-4 rounded-xl border-2 border-dashed border-line bg-mist/20 p-6 text-center">
+                  <p className="text-sm font-bold text-ink">No events scheduled for today.</p>
+                  <p className="mt-1 text-xs text-ink/60">
+                    Create a session to begin taking attendance for your class.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateEvent(true)}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white hover:bg-brand-dark"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-bold text-ink">{s.full_name}</p>
-                      <p className="truncate text-xs text-ink/60">
-                        {s.matric_no ? (
-                          <span className="font-medium text-ink/80">{s.matric_no}</span>
-                        ) : (
-                          <span className="italic text-ink/40">No matric number yet</span>
-                        )}
-                        {s.detail && ` · ${s.detail}`}
-                      </p>
-                    </div>
-                    <ChevronRightIcon className="h-4 w-4 shrink-0 text-ink/40" />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                    <PlusIcon className="h-3.5 w-3.5" /> Schedule today&apos;s event
+                  </button>
+                </div>
+              ) : (
+                <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
+                  {todaysEvents.map((evt) => {
+                    const presentCount = evt.attendance?.length || 0
+
+                    return (
+                      <li
+                        key={evt.id}
+                        onClick={() => onSelectEvent(evt)}
+                        className="group flex cursor-pointer items-center justify-between gap-3 p-4 transition-colors hover:bg-mist/50 sm:p-5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-extrabold text-ink text-base group-hover:text-brand">
+                              {evt.title}
+                            </h3>
+                            {evt.status === 'open' && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/15 px-2.5 py-0.5 text-xs font-extrabold text-ok">
+                                <span className="h-1.5 w-1.5 rounded-full bg-ok animate-pulse" />
+                                Room open
+                              </span>
+                            )}
+                            {evt.status === 'scheduled' && (
+                              <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink/65">
+                                Scheduled
+                              </span>
+                            )}
+                            {evt.status === 'closed' && (
+                              <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink/50">
+                                Closed
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-ink/60">
+                            <span className="font-extrabold text-brand">{presentCount}</span> student
+                            {presentCount === 1 ? '' : 's'} present
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs font-bold text-brand group-hover:underline">
+                          <span className="hidden sm:inline">Open event</span>
+                          <ChevronRightIcon className="h-4 w-4 text-ink/40 group-hover:text-brand" />
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {/* Section: Past Events */}
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
+              <div className="flex items-center justify-between border-b border-line pb-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-ink sm:text-xl">Past Events</h2>
+                  <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-extrabold text-ink/70">
+                    {pastEvents.length}
+                  </span>
+                </div>
+              </div>
+
+              {pastEvents.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-line bg-mist/20 p-6 text-center text-xs text-ink/60">
+                  No past sessions recorded yet.
+                </div>
+              ) : (
+                <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
+                  {pastEvents.slice(0, 8).map((evt) => {
+                    const presentCount = evt.attendance?.length || 0
+
+                    return (
+                      <li
+                        key={evt.id}
+                        onClick={() => onSelectEvent(evt)}
+                        className="group flex cursor-pointer items-center justify-between gap-3 p-3.5 transition-colors hover:bg-mist/50 sm:p-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate font-bold text-ink text-sm sm:text-base group-hover:text-brand">
+                              {evt.title}
+                            </p>
+                            <span className="rounded-md bg-mist px-2 py-0.5 text-[11px] font-semibold text-ink/60">
+                              {formatLagosDate(evt.event_date)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-ink/60">
+                            <span className="font-bold text-ink">{presentCount}</span> present ·{' '}
+                            <span className="capitalize">{evt.status}</span>
+                          </p>
+                        </div>
+                        <ChevronRightIcon className="h-4 w-4 shrink-0 text-ink/30 group-hover:text-brand" />
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          {/* COLUMN 2: STUDENTS DIRECTORY (5 cols on Desktop) */}
+          <div
+            className={`space-y-6 lg:col-span-5 ${
+              mobileTab !== 'students' ? 'hidden lg:block' : ''
+            }`}
+          >
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
+              <div className="flex items-center justify-between border-b border-line pb-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-ink sm:text-xl">
+                    All Students
+                  </h2>
+                  <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-extrabold text-ink/70">
+                    {students.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddError('')
+                    setAddMsg('')
+                    setShowAddStudent(true)
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-line bg-mist/60 px-2.5 py-1.5 text-xs font-bold text-ink hover:bg-mist"
+                >
+                  <PlusIcon className="h-3.5 w-3.5" /> Add student
+                </button>
+              </div>
+
+              {/* Search bar */}
+              <div className="relative mt-4">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <SearchIcon className="h-4 w-4 text-ink/40" />
+                </div>
+                <input
+                  type="text"
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  placeholder="Search name or matric number…"
+                  className="w-full rounded-xl border border-line bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                />
+                {studentSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentSearch('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs font-bold text-ink/40 hover:text-ink"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Students list */}
+              {students.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-line bg-mist/20 p-6 text-center text-xs text-ink/60">
+                  No students added yet.
+                </div>
+              ) : filteredStudents.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-line bg-mist/20 p-6 text-center text-xs text-ink/60">
+                  No students matching &ldquo;{studentSearch}&rdquo;.
+                </div>
+              ) : (
+                <ul className="mt-4 max-h-[580px] divide-y divide-line overflow-y-auto rounded-xl border border-line">
+                  {filteredStudents.map((s) => (
+                    <li
+                      key={s.id}
+                      onClick={() => onSelectStudent?.(s)}
+                      className="group flex cursor-pointer items-center justify-between gap-3 p-3.5 transition-colors hover:bg-mist/50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-ink text-sm sm:text-base group-hover:text-brand">
+                          {s.full_name}
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink/60">
+                          {s.matric_no ? (
+                            <span className="font-semibold text-brand">
+                              {s.matric_no}
+                            </span>
+                          ) : (
+                            <span className="italic text-ink/40">No matric number yet</span>
+                          )}
+                          {s.detail && <span className="text-ink/30">·</span>}
+                          {s.detail && <span>{s.detail}</span>}
+                        </div>
+                      </div>
+                      <ChevronRightIcon className="h-4 w-4 shrink-0 text-ink/30 group-hover:text-brand" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         </div>
       </main>
 
-      {/* Create Event Modal */}
+      {/* MOBILE SLIDE-OUT MENU DRAWER (< 768px) */}
+      {mobileMenuOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex justify-end bg-ink/60 backdrop-blur-xs animate-in fade-in duration-150 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-full w-full max-w-xs flex-col justify-between bg-white p-6 shadow-2xl animate-in slide-in-from-right duration-200"
+          >
+            <div className="space-y-6">
+              {/* Header with Close */}
+              <div className="flex items-center justify-between border-b border-line pb-4">
+                <Brand />
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-mist text-ink/60 hover:text-ink"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* User Identity Card */}
+              <div className="rounded-xl border border-line bg-mist/40 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-black text-white">
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-extrabold text-ink text-sm">
+                      {profile?.full_name || 'Teacher'}
+                    </p>
+                    <p className="truncate text-xs text-ink/60">{profile?.email || ''}</p>
+                    <span className="mt-1 inline-block rounded-md bg-brand/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-brand">
+                      {isPrincipal ? 'Principal Account' : 'Teacher Account'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Options for Principals */}
+              {isPrincipal && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/40">
+                    Principal Controls
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      onOpenDashboard()
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-brand/20 bg-brand/5 p-3 text-left transition-colors hover:bg-brand/10"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-white">
+                      <BarChartIcon className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-black text-brand">Attendance Dashboard</p>
+                      <p className="text-[11px] text-ink/60">Turnout rates & analytics</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      onManageTeachers()
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-line bg-white p-3 text-left transition-colors hover:bg-mist"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-mist text-ink/70">
+                      <UsersIcon className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-ink">Manage Teachers</p>
+                      <p className="text-[11px] text-ink/60">Approve & manage access</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div className="space-y-2">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/40">
+                  Quick Actions
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setShowCreateEvent(true)
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-2.5 text-xs font-bold text-ink hover:bg-mist"
+                >
+                  <CalendarIcon className="h-4 w-4 text-brand" /> Create class session
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setAddError('')
+                    setAddMsg('')
+                    setShowAddStudent(true)
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-2.5 text-xs font-bold text-ink hover:bg-mist"
+                >
+                  <UserPlusIcon className="h-4 w-4 text-brand" /> Add new student
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom: Sign out */}
+            <div className="border-t border-line pt-4">
+              <button
+                type="button"
+                onClick={() => supabase.auth.signOut()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50/50 py-3 text-xs font-bold text-red-700 hover:bg-red-50"
+              >
+                <SignOutIcon className="h-4 w-4" /> Sign out of account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE EVENT MODAL */}
       {showCreateEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-xs"
+          onClick={() => setShowCreateEvent(false)}
+        >
           <form
             onSubmit={handleCreateEvent}
-            className="w-full max-w-sm rounded-xl border border-line bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-7"
           >
-            <div className="flex items-center gap-2 text-brand">
-              <CalendarIcon className="h-5 w-5" />
-              <h3 className="text-xl font-extrabold text-ink">Create event</h3>
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2 text-brand">
+                <CalendarIcon className="h-5 w-5" />
+                <h3 className="text-xl font-black text-ink">Create Event</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateEvent(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-mist text-ink/60 hover:text-ink"
+              >
+                ✕
+              </button>
             </div>
-            <p className="mt-1 text-sm text-ink/60">
-              Schedule a class session to open an attendance room.
+            <p className="mt-2 text-xs text-ink/65">
+              Schedule a class session to open an attendance room for your students.
             </p>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-ink" htmlFor="new-event-title">
                   Event title
@@ -614,10 +865,10 @@ export default function Home({
                   id="new-event-title"
                   required
                   autoFocus
-                  placeholder="e.g. Sunday class"
+                  placeholder="e.g. Sunday class, Bible study"
                   value={newEventTitle}
                   onChange={(e) => setNewEventTitle(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-line px-3.5 py-2.5 text-sm focus:border-brand"
+                  className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                 />
               </div>
 
@@ -631,7 +882,7 @@ export default function Home({
                   required
                   value={newEventDate}
                   onChange={(e) => setNewEventDate(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-line px-3.5 py-2.5 text-sm focus:border-brand"
+                  className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                 />
               </div>
             </div>
@@ -642,8 +893,9 @@ export default function Home({
 
             <div className="mt-6 flex gap-3">
               <button
+                type="submit"
                 disabled={creatingEvent}
-                className="flex-1 rounded-md bg-brand py-3 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                className="flex-1 rounded-xl bg-brand py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brand-dark disabled:opacity-50"
               >
                 {creatingEvent ? 'Creating…' : 'Create event'}
               </button>
@@ -653,7 +905,111 @@ export default function Home({
                   setShowCreateEvent(false)
                   setEventError('')
                 }}
-                className="flex-1 rounded-md border border-line bg-mist py-3 text-sm font-bold text-ink hover:bg-white"
+                className="flex-1 rounded-xl border border-line bg-mist py-3 text-sm font-bold text-ink hover:bg-line/40"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ADD STUDENT MODAL */}
+      {showAddStudent && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-xs"
+          onClick={() => setShowAddStudent(false)}
+        >
+          <form
+            onSubmit={addStudent}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-7"
+          >
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2 text-brand">
+                <UserPlusIcon className="h-5 w-5" />
+                <h3 className="text-xl font-black text-ink">Add a Student</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddStudent(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-mist text-ink/60 hover:text-ink"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-ink/65">
+              Add a student to the unit roster. Matric numbers can be added later.
+            </p>
+
+            <div className="mt-5 space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-ink" htmlFor="add-student-name">
+                  Full name *
+                </label>
+                <input
+                  id="add-student-name"
+                  required
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Samuel Ade"
+                  className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-ink" htmlFor="add-student-matric">
+                  Matric number <span className="font-normal text-ink/50">(optional)</span>
+                </label>
+                <input
+                  id="add-student-matric"
+                  value={matricNo}
+                  onChange={(e) => setMatricNo(e.target.value)}
+                  placeholder="e.g. FFS-042"
+                  className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-ink" htmlFor="add-student-detail">
+                  Detail <span className="font-normal text-ink/50">(optional)</span>
+                </label>
+                <input
+                  id="add-student-detail"
+                  value={detail}
+                  onChange={(e) => setDetail(e.target.value)}
+                  placeholder="e.g. Senior class, Department"
+                  className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                />
+              </div>
+            </div>
+
+            {addError && <p className="mt-3 text-xs font-bold text-red-700">{addError}</p>}
+            {addMsg && (
+              <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-ok">
+                <CheckCircleIcon className="h-4 w-4" /> {addMsg}
+              </p>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="submit"
+                disabled={savingStudent}
+                className="flex-1 rounded-xl bg-brand py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brand-dark disabled:opacity-50"
+              >
+                {savingStudent ? 'Saving student…' : 'Save student'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddStudent(false)
+                  setAddError('')
+                  setAddMsg('')
+                }}
+                className="flex-1 rounded-xl border border-line bg-mist py-3 text-sm font-bold text-ink hover:bg-line/40"
               >
                 Cancel
               </button>

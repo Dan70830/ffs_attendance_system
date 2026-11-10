@@ -118,14 +118,16 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
 
   return (
     <div className="min-h-screen bg-mist">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-8">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Brand />
           <button
             onClick={onBack}
-            className="flex items-center gap-2 rounded-md border border-line px-3.5 py-2 text-sm font-bold text-ink hover:bg-mist"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
           >
-            <ArrowLeftIcon className="h-4 w-4" /> Back to home
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to home</span>
+            <span className="sm:hidden">Back</span>
           </button>
         </div>
       </header>
@@ -151,10 +153,10 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
         ) : (
           <div className="mt-8 space-y-8">
             {/* List 1: Waiting for approval */}
-            <section className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-sm">
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="text-lg font-bold sm:text-xl">Waiting for approval</h2>
+                  <h2 className="text-lg font-black text-ink sm:text-xl">Waiting for approval</h2>
                   <span className="rounded-full bg-sun/30 px-2.5 py-0.5 text-xs font-extrabold text-ink">
                     {waitingList.length}
                   </span>
@@ -215,10 +217,10 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
             </section>
 
             {/* List 2: Active */}
-            <section className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-sm">
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="text-lg font-bold sm:text-xl">Active</h2>
+                  <h2 className="text-lg font-black text-ink sm:text-xl">Active</h2>
                   <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-extrabold text-brand">
                     {activeList.length}
                   </span>

@@ -140,14 +140,16 @@ export default function StudentPage({ studentId, onBack }) {
 
   return (
     <div className="min-h-screen bg-mist">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-8">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Brand />
           <button
             onClick={onBack}
-            className="flex items-center gap-2 rounded-md border border-line px-3.5 py-2 text-sm font-bold text-ink hover:bg-mist"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
           >
-            <ArrowLeftIcon className="h-4 w-4" /> Back to home
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to home</span>
+            <span className="sm:hidden">Back</span>
           </button>
         </div>
       </header>
@@ -192,8 +194,8 @@ export default function StudentPage({ studentId, onBack }) {
             </div>
 
             {/* Edit details card */}
-            <section className="rounded-xl border border-line bg-white p-5 sm:p-6">
-              <h2 className="text-lg font-bold sm:text-xl">Edit details</h2>
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+              <h2 className="text-lg font-black text-ink sm:text-xl">Edit details</h2>
               <p className="mt-1 text-xs text-ink/60">
                 Update name, matric number, or descriptive notes.
               </p>
@@ -201,14 +203,14 @@ export default function StudentPage({ studentId, onBack }) {
               <form onSubmit={handleSave} className="mt-5 space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-ink" htmlFor="edit-name">
-                    Full name
+                    Full name *
                   </label>
                   <input
                     id="edit-name"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1.5 w-full rounded-md border border-line px-4 py-2.5 text-sm focus:border-brand"
+                    className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                   />
                 </div>
 
@@ -221,7 +223,7 @@ export default function StudentPage({ studentId, onBack }) {
                     value={matricNo}
                     onChange={(e) => setMatricNo(e.target.value)}
                     placeholder="No matric number yet"
-                    className="mt-1.5 w-full rounded-md border border-line px-4 py-2.5 text-sm focus:border-brand"
+                    className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                   />
                   <p className="mt-1 text-xs text-ink/50">
                     Required for student identification, but can be added or updated anytime.
@@ -237,13 +239,13 @@ export default function StudentPage({ studentId, onBack }) {
                     value={detail}
                     onChange={(e) => setDetail(e.target.value)}
                     placeholder="e.g. Senior Class, Age 12, or Choir"
-                    className="mt-1.5 w-full rounded-md border border-line px-4 py-2.5 text-sm focus:border-brand"
+                    className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                   />
                 </div>
 
-                {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
+                {error && <p className="text-xs font-bold text-red-700">{error}</p>}
                 {success && (
-                  <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-bold text-ok">
                     <CheckCircleIcon className="h-4 w-4" /> {success}
                   </p>
                 )}
@@ -251,7 +253,7 @@ export default function StudentPage({ studentId, onBack }) {
                 <div className="pt-2">
                   <button
                     disabled={saving}
-                    className="rounded-md bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-60"
+                    className="w-full sm:w-auto rounded-xl bg-brand px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-brand-dark active:scale-[0.98] disabled:opacity-60"
                   >
                     {saving ? 'Saving changes…' : 'Save changes'}
                   </button>
@@ -260,7 +262,7 @@ export default function StudentPage({ studentId, onBack }) {
             </section>
 
             {/* Attendance history card */}
-            <section className="rounded-xl border border-line bg-white p-5 sm:p-6">
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold sm:text-xl">Attendance history</h2>

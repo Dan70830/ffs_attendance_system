@@ -121,17 +121,34 @@ export const AlertCircleIcon = ({ className = 'h-5 w-5' }) => (
   </svg>
 )
 
+export const MenuIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+)
+
+export const XIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
 export function Brand({ onDark = false }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
       <span
-        className={`flex h-10 w-10 items-center justify-center rounded-md text-sm font-extrabold ${
+        className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-xs sm:text-sm font-extrabold shadow-2xs ${
           onDark ? 'bg-white text-brand' : 'bg-brand text-white'
         }`}
       >
         FFS
       </span>
-      <span className="text-base font-bold">Attendance System</span>
+      <span className="text-sm sm:text-base font-extrabold tracking-tight text-ink truncate">
+        Attendance System
+      </span>
     </div>
   )
 }

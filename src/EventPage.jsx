@@ -169,14 +169,16 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
 
   return (
     <div className="min-h-screen bg-mist">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-8">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Brand />
           <button
             onClick={onBack}
-            className="flex items-center gap-2 rounded-md border border-line px-3.5 py-2 text-sm font-bold text-ink hover:bg-mist"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
           >
-            <ArrowLeftIcon className="h-4 w-4" /> Back to home
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to home</span>
+            <span className="sm:hidden">Back</span>
           </button>
         </div>
       </header>
@@ -200,13 +202,13 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
             </button>
           </div>
         ) : (
-          <div className="space-y-6 sm:space-y-8">
+          <div className="space-y-6">
             {/* Event Header Information */}
-            <div className="rounded-xl border border-line bg-white p-6 sm:p-8">
+            <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-extrabold sm:text-3xl">{event.title}</h1>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="text-2xl font-black text-ink sm:text-3xl">{event.title}</h1>
                     {event.status === 'open' && (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/15 px-3 py-1 text-xs font-extrabold text-ok">
                         <span className="h-2 w-2 rounded-full bg-ok animate-pulse" />
@@ -224,19 +226,19 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
                       </span>
                     )}
                   </div>
-                  <p className="mt-1.5 text-sm text-ink/60 sm:text-base">
+                  <p className="mt-1.5 text-xs text-ink/65 sm:text-sm">
                     {formatEventDate(event.event_date)}
                   </p>
                 </div>
               </div>
 
               {errorMsg && (
-                <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs sm:text-sm font-bold text-red-700">
                   {errorMsg}
                 </div>
               )}
               {infoMsg && (
-                <div className="mt-5 rounded-lg border border-line bg-mist/60 p-4 text-sm font-bold text-brand">
+                <div className="mt-4 rounded-xl border border-line bg-mist/60 p-4 text-xs sm:text-sm font-bold text-brand">
                   {infoMsg}
                 </div>
               )}
@@ -247,15 +249,15 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
                   <>
                     <button
                       onClick={() => onOpenKiosk(event)}
-                      className="flex flex-1 items-center justify-center gap-3 rounded-lg bg-brand px-6 py-4 text-center text-base font-extrabold text-white shadow-sm hover:bg-brand-dark sm:text-lg"
+                      className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-brand px-6 py-4 text-center text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.98] sm:text-lg"
                     >
-                      <DoorOpenIcon className="h-6 w-6" /> Open check-in screen
-                      <ArrowRightIcon className="h-5 w-5" />
+                      <DoorOpenIcon className="h-5 w-5 sm:h-6 sm:w-6" /> Open check-in screen
+                      <ArrowRightIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                     <button
                       onClick={handleCloseRoom}
                       disabled={actionBusy}
-                      className="rounded-lg border border-line bg-white px-5 py-4 text-sm font-bold text-ink hover:bg-mist disabled:opacity-50"
+                      className="rounded-xl border border-line bg-white px-5 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-mist active:scale-[0.98] disabled:opacity-50"
                     >
                       {actionBusy ? 'Closing…' : 'Close room'}
                     </button>
@@ -264,7 +266,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
                   <button
                     onClick={handleOpenRoom}
                     disabled={actionBusy}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-base font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-brand px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50"
                   >
                     <DoorOpenIcon className="h-5 w-5" />
                     {actionBusy
@@ -278,7 +280,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
             </div>
 
             {/* Students Present Section */}
-            <section className="rounded-xl border border-line bg-white p-5 sm:p-6">
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2 className="text-xl font-extrabold text-ink">Students present</h2>

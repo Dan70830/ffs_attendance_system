@@ -358,14 +358,16 @@ export default function AttendanceDashboard({
   return (
     <div className="min-h-screen bg-mist">
       {/* Header */}
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-8">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Brand />
           <button
             onClick={onBack}
-            className="flex items-center gap-2 rounded-lg border border-line px-3.5 py-2 text-sm font-bold text-ink hover:bg-mist"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
           >
-            <ArrowLeftIcon className="h-4 w-4" /> Back to home
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to home</span>
+            <span className="sm:hidden">Back</span>
           </button>
         </div>
       </header>
@@ -444,7 +446,7 @@ export default function AttendanceDashboard({
 
             {/* Navigation Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-2">
-              <nav className="flex space-x-2" aria-label="Tabs">
+              <nav className="flex space-x-2 overflow-x-auto max-w-full pb-1 scrollbar-none" aria-label="Tabs">
                 <button
                   type="button"
                   onClick={() => setActiveTab('events')}
