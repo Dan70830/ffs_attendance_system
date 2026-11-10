@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --color-brand: #0b5d5b;
+  --color-brand-dark: #084543;
+  --color-ink: #0d2321;
+  --color-mist: #f2f5f4;
+  --color-line: #d5dedc;
+  --color-sun: #f5c84c;
+  --color-ok: #1e8e4f;
+  --color-red: #b91c1c;
+}
+
+body {
+  margin: 0;
+  background: var(--color-mist);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--color-sun);
+  outline-offset: 2px;
+}
