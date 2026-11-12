@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { Brand, CheckCircleIcon, CheckIcon, DoorOpenIcon, SearchIcon, SignOutIcon } from './Icons'
+import {
+  Brand,
+  CheckCircleIcon,
+  CheckIcon,
+  DoorOpenIcon,
+  EyeIcon,
+  EyeOffIcon,
+  SearchIcon,
+  SignOutIcon,
+} from './Icons'
 
 function formatKioskDate(dateStr) {
   if (!dateStr) return ''
@@ -28,6 +37,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
   const [notice, setNotice] = useState(null)
   const [exiting, setExiting] = useState(false)
   const [pw, setPw] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [pwError, setPwError] = useState('')
   const [pwBusy, setPwBusy] = useState(false)
   const [marking, setMarking] = useState(false)
@@ -473,14 +483,25 @@ export default function Kiosk({ event, profile, email, onExit }) {
             <p className="mt-1 text-sm text-ink/60">
               Enter your password to leave the check-in screen.
             </p>
-            <input
-              autoFocus
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder="Your password"
-              className="mt-4 w-full rounded-xl border border-line px-4 py-3 text-base focus:border-brand focus:outline-hidden"
-            />
+            <div className="relative mt-4">
+              <input
+                autoFocus
+                type={showPw ? 'text' : 'password'}
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                placeholder="Your password"
+                className="w-full rounded-xl border border-line pl-4 pr-11 py-3 text-base focus:border-brand focus:outline-hidden"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-ink/45 hover:text-ink transition-colors cursor-pointer"
+                aria-label={showPw ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showPw ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
+            </div>
             {pwError && <p className="mt-2 text-sm font-semibold text-red-700">{pwError}</p>}
             <div className="mt-6 flex gap-3">
               <button

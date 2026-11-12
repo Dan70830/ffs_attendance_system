@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { supabase } from './supabase'
-import { Brand } from './Icons'
+import { Brand, EyeIcon, EyeOffIcon } from './Icons'
 
 export default function Login() {
   const [tab, setTab] = useState('signin') // 'signin' | 'signup' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [showSignInPassword, setShowSignInPassword] = useState(false)
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
@@ -81,10 +83,24 @@ export default function Login() {
         },
         { onConflict: 'id', ignoreDuplicates: true }
       )
+
+      // Notify principals asynchronously in the background
+      try {
+        fetch('/api/notify-principal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            teacherName: name,
+            teacherEmail: email.trim().toLowerCase(),
+          }),
+        }).catch(() => {})
+      } catch {
+        // Non-blocking notification
+      }
     }
 
     if (!data?.session) {
-      setInfo('Account created. Please sign in with your email and password.')
+      setInfo('Account created! A notification has been sent to the principals to approve your account. Please sign in.')
       setBusy(false)
       setTab('signin')
     }
@@ -245,16 +261,27 @@ export default function Login() {
                       Forgot password?
                     </button>
                   </div>
-                  <input
-                    id="signin-password"
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    placeholder="Your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
-                  />
+                  <div className="relative mt-1.5">
+                    <input
+                      id="signin-password"
+                      type={showSignInPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="current-password"
+                      placeholder="Your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-xl border border-line bg-white pl-4 pr-11 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignInPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-ink/45 hover:text-ink transition-colors cursor-pointer"
+                      aria-label={showSignInPassword ? 'Hide password' : 'Show password'}
+                      tabIndex={-1}
+                    >
+                      {showSignInPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -327,17 +354,28 @@ export default function Login() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="signup-password">
                     Password
                   </label>
-                  <input
-                    id="signup-password"
-                    type="password"
-                    required
-                    minLength={6}
-                    autoComplete="new-password"
-                    placeholder="At least 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
-                  />
+                  <div className="relative mt-1.5">
+                    <input
+                      id="signup-password"
+                      type={showSignUpPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      autoComplete="new-password"
+                      placeholder="At least 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-xl border border-line bg-white pl-4 pr-11 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUpPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-ink/45 hover:text-ink transition-colors cursor-pointer"
+                      aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
+                      tabIndex={-1}
+                    >
+                      {showSignUpPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
