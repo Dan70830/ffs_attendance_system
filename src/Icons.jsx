@@ -146,7 +146,11 @@ export function Brand({ onDark = false }) {
       >
         FFS
       </span>
-      <span className="text-sm sm:text-base font-extrabold tracking-tight text-ink truncate">
+      <span
+        className={`text-sm sm:text-base font-extrabold tracking-tight truncate ${
+          onDark ? 'text-white' : 'text-ink'
+        }`}
+      >
         Attendance System
       </span>
     </div>
