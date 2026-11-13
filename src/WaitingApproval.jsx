@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { Brand, CheckCircleIcon, ClockIcon, MailIcon, SignOutIcon } from './Icons'
+import { fetchPrincipals, triggerPrincipalEmail } from './emailUtils'
 
 export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
   const [checking, setChecking] = useState(false)
@@ -12,14 +13,9 @@ export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
     let mounted = true
     async function loadPrincipals() {
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('full_name, email')
-          .eq('role', 'principal')
-          .eq('approved', true)
-
-        if (mounted && data) {
-          setPrincipals(data.filter((p) => p.email))
+        const data = await fetchPrincipals(supabase)
+        if (mounted && data && data.length > 0) {
+          setPrincipals(data)
         }
       } catch (err) {
         console.error('Error fetching principals:', err)
@@ -38,16 +34,16 @@ export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
     setChecking(false)
   }
 
-  async function handleNotifyPrincipals() {
+  function handleNotifyPrincipals() {
     setNotifyStatus('sending')
 
     const principalEmails = principals.map((p) => p.email).filter(Boolean)
     const teacherName = profile?.full_name || 'A new teacher'
     const teacherEmail = profile?.email || ''
 
-    // 1. Attempt automated backend notification (Vercel Serverless / Resend)
+    // 1. Attempt optional backend notification
     try {
-      await fetch('/api/notify-principal', {
+      fetch('/api/notify-principal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -55,22 +51,17 @@ export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
           teacherEmail,
           principalEmails,
         }),
-      })
-    } catch (err) {
-      console.warn('Backend notification not reachable:', err)
+      }).catch(() => {})
+    } catch {
+      // Non-blocking
     }
 
-    // 2. Open client-side mailto draft as a guaranteed 1-tap backup
-    if (principalEmails.length > 0) {
-      const subject = encodeURIComponent(
-        `FFS Attendance: Account Approval Needed for ${teacherName}`
-      )
-      const body = encodeURIComponent(
-        `Dear Principal,\n\nI have registered as a teacher on the Firm Foundation School Attendance System:\n\nName: ${teacherName}\nEmail: ${teacherEmail}\n\nPlease log in to review and approve my account when you are free:\n${window.location.origin}\n\nThank you!`
-      )
-      const mailtoLink = `mailto:${principalEmails.join(',')}?subject=${subject}&body=${body}`
-      window.location.href = mailtoLink
-    }
+    // 2. Open user's default email client with pre-formatted email to the 2 principals (Zero cost)
+    triggerPrincipalEmail({
+      teacherName,
+      teacherEmail,
+      principalEmails,
+    })
 
     setNotifyStatus('sent')
   }
@@ -115,8 +106,7 @@ export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
               <div className="flex-1 min-w-0">
                 <h2 className="text-sm font-bold text-ink">Notify the Principals</h2>
                 <p className="mt-0.5 text-xs text-ink/65 leading-relaxed">
-                  Send an email to ask the school principals to come online and approve your
-                  account.
+                  Send a pre-formatted email to the school principals asking them to review and approve your account.
                 </p>
 
                 {principals.length > 0 && (
@@ -131,7 +121,7 @@ export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
                 {notifyStatus === 'sent' && (
                   <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs font-bold text-emerald-800">
                     <CheckCircleIcon className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Notification triggered! Email sent to the principals.</span>
+                    <span>Email client opened! Tap &quot;Send&quot; in your mail app.</span>
                   </div>
                 )}
 
@@ -139,19 +129,15 @@ export default function WaitingApproval({ profile, onRefresh, onSignOut }) {
                   type="button"
                   onClick={handleNotifyPrincipals}
                   disabled={notifyStatus === 'sending'}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 transition-all cursor-pointer"
+                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 transition-all cursor-pointer"
                 >
                   <MailIcon className="h-4 w-4" />
-                  {notifyStatus === 'sending'
-                    ? 'Sending notification…'
-                    : notifyStatus === 'sent'
-                    ? 'Send reminder email again'
-                    : 'Email Principals to Approve'}
+                  {notifyStatus === 'sent' ? 'Open email again' : 'Email Principals to Approve'}
                 </button>
 
                 {principalEmailList.length > 0 && (
                   <p className="mt-2 text-[11px] text-ink/50">
-                    Direct email:{' '}
+                    Sending to:{' '}
                     <span className="font-mono text-ink/70">
                       {principalEmailList.join(', ')}
                     </span>

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { Brand, EyeIcon, EyeOffIcon } from './Icons'
+import { Brand, CheckCircleIcon, EyeIcon, EyeOffIcon, MailIcon } from './Icons'
+import { fetchPrincipals, triggerPrincipalEmail } from './emailUtils'
 
 export default function Login() {
-  const [tab, setTab] = useState('signin') // 'signin' | 'signup' | 'forgot'
+  const [tab, setTab] = useState('signin') // 'signin' | 'signup' | 'forgot' | 'signup_success'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -12,11 +13,28 @@ export default function Login() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
+  const [principals, setPrincipals] = useState([])
+  const [registeredName, setRegisteredName] = useState('')
+  const [registeredEmail, setRegisteredEmail] = useState('')
+  const [emailTriggered, setEmailTriggered] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    fetchPrincipals(supabase).then((data) => {
+      if (mounted && data && data.length > 0) {
+        setPrincipals(data)
+      }
+    })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   function switchTab(newTab) {
     setTab(newTab)
     setError('')
     setInfo('')
+    setEmailTriggered(false)
   }
 
   async function handleSignIn(e) {
@@ -55,8 +73,10 @@ export default function Login() {
 
     setBusy(true)
 
+    const cleanEmail = email.trim().toLowerCase()
+
     const { data, error: signUpErr } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: cleanEmail,
       password,
       options: {
         data: {
@@ -77,21 +97,22 @@ export default function Login() {
         {
           id: data.user.id,
           full_name: name,
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           role: 'teacher',
           approved: false,
         },
         { onConflict: 'id', ignoreDuplicates: true }
       )
 
-      // Notify principals asynchronously in the background
+      // Notify principals asynchronously in the background (if backend is configured)
       try {
         fetch('/api/notify-principal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             teacherName: name,
-            teacherEmail: email.trim().toLowerCase(),
+            teacherEmail: cleanEmail,
+            principalEmails: principals.map((p) => p.email),
           }),
         }).catch(() => {})
       } catch {
@@ -99,10 +120,14 @@ export default function Login() {
       }
     }
 
+    setRegisteredName(name)
+    setRegisteredEmail(cleanEmail)
+    setEmailTriggered(false)
+    setBusy(false)
+
     if (!data?.session) {
-      setInfo('Account created! A notification has been sent to the principals to approve your account. Please sign in.')
-      setBusy(false)
-      setTab('signin')
+      // Show approval request view with 1-tap email to principals
+      setTab('signup_success')
     }
   }
 
@@ -185,12 +210,12 @@ export default function Login() {
       <div className="flex items-center justify-center bg-white p-6 sm:p-10 lg:col-span-6 lg:min-h-screen lg:p-14 xl:col-span-5 xl:p-16">
         <div className="w-full max-w-md">
           {/* Tabs: Sign in & Create account */}
-          {tab !== 'forgot' ? (
+          {tab === 'signin' || tab === 'signup' ? (
             <div className="flex rounded-2xl border border-line bg-mist p-1.5 shadow-2xs">
               <button
                 type="button"
                 onClick={() => switchTab('signin')}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all ${
+                className={`flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
                   tab === 'signin'
                     ? 'bg-white text-ink shadow-xs'
                     : 'text-ink/60 hover:text-ink'
@@ -201,7 +226,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchTab('signup')}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all ${
+                className={`flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
                   tab === 'signup'
                     ? 'bg-white text-ink shadow-xs'
                     : 'text-ink/60 hover:text-ink'
@@ -214,7 +239,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => switchTab('signin')}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-ink/60 hover:text-ink"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-ink/60 hover:text-ink cursor-pointer"
             >
               ← Back to sign in
             </button>
@@ -256,7 +281,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => switchTab('forgot')}
-                      className="text-xs font-bold text-brand hover:underline"
+                      className="text-xs font-bold text-brand hover:underline cursor-pointer"
                     >
                       Forgot password?
                     </button>
@@ -299,7 +324,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60"
+                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {busy ? 'Signing in…' : 'Sign in'}
               </button>
@@ -388,11 +413,92 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60"
+                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {busy ? 'Creating account…' : 'Create account'}
               </button>
             </form>
+          )}
+
+          {tab === 'signup_success' && (
+            <div className="mt-6 sm:mt-8 space-y-5">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800">
+                  <CheckCircleIcon className="h-4 w-4 text-emerald-600" /> Account Created
+                </span>
+                <h2 className="mt-3 text-2xl font-black tracking-tight text-ink sm:text-3xl">
+                  Approval Required
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink/70">
+                  Welcome, <strong className="font-bold text-ink">{registeredName}</strong>. Your teacher account has been registered. Before you can record attendance, one of the school principals must approve your access.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-2xs">
+                    <MailIcon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-ink">Notify the Principals</h3>
+                    <p className="mt-0.5 text-xs text-ink/65 leading-relaxed">
+                      Click below to send a pre-formatted email to the principals requesting approval.
+                    </p>
+
+                    {principals.length > 0 && (
+                      <div className="mt-2 text-xs font-semibold text-ink/75">
+                        Principals:{' '}
+                        <span className="font-bold text-brand">
+                          {principals.map((p) => p.full_name || p.email).join(', ')}
+                        </span>
+                      </div>
+                    )}
+
+                    {emailTriggered && (
+                      <div className="mt-2.5 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2 text-xs font-bold text-emerald-800">
+                        <CheckCircleIcon className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>Email app opened! Tap &quot;Send&quot; in your mail client.</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerPrincipalEmail({
+                          teacherName: registeredName,
+                          teacherEmail: registeredEmail,
+                          principalEmails: principals.map((p) => p.email),
+                        })
+                        setEmailTriggered(true)
+                      }}
+                      className="mt-3.5 flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                      <MailIcon className="h-4 w-4" />
+                      {emailTriggered ? 'Open email again' : 'Email Principals to Approve'}
+                    </button>
+
+                    {principals.length > 0 && (
+                      <p className="mt-2 text-[11px] text-ink/50">
+                        Sending to:{' '}
+                        <span className="font-mono text-ink/70">
+                          {principals.map((p) => p.email).filter(Boolean).join(', ')}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => switchTab('signin')}
+                  className="flex w-full items-center justify-center rounded-xl bg-ink py-3.5 text-sm font-bold text-white shadow-2xs hover:bg-ink/90 active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  Proceed to Sign in →
+                </button>
+              </div>
+            </div>
           )}
 
           {tab === 'forgot' && (
@@ -436,7 +542,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60"
+                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {busy ? 'Sending link…' : 'Send reset link'}
               </button>
@@ -444,7 +550,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchTab('signin')}
-                className="mt-3 w-full rounded-xl border border-line py-3 text-sm font-bold text-ink/70 transition-colors hover:bg-mist"
+                className="mt-3 w-full rounded-xl border border-line py-3 text-sm font-bold text-ink/70 transition-colors hover:bg-mist cursor-pointer"
               >
                 Back to sign in
               </button>
