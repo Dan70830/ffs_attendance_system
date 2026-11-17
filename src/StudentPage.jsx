@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { ArrowLeftIcon, Brand, CheckCircleIcon } from './Icons'
+import GroupBadge from './GroupBadge'
 
 function formatDate(dateStr, timestamp) {
   const d = dateStr ? new Date(`${dateStr}T12:00:00`) : new Date(timestamp)
@@ -28,6 +29,8 @@ export default function StudentPage({ studentId, onBack }) {
   const [name, setName] = useState('')
   const [matricNo, setMatricNo] = useState('')
   const [detail, setDetail] = useState('')
+  const [groupId, setGroupId] = useState('')
+  const [groups, setGroups] = useState([])
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -40,20 +43,32 @@ export default function StudentPage({ studentId, onBack }) {
     async function loadData() {
       setLoading(true)
 
-      // Fetch student details
+      // Fetch student details with group data
       const { data: sData, error: sErr } = await supabase
         .from('students')
-        .select('*')
+        .select('*, student_groups(id, name, color, lead_teacher:lead_teacher_id(full_name))')
         .eq('id', studentId)
         .maybeSingle()
 
+      // Fetch all active groups
+      const { data: gData } = await supabase
+        .from('student_groups')
+        .select('id, name, color')
+        .eq('active', true)
+        .order('name')
+
       if (!mounted) return
+
+      if (gData) {
+        setGroups(gData)
+      }
 
       if (!sErr && sData) {
         setStudent(sData)
         setName(sData.full_name || '')
         setMatricNo(sData.matric_no || '')
         setDetail(sData.detail || '')
+        setGroupId(sData.group_id || '')
       }
 
       // Fetch attendance history
@@ -115,6 +130,7 @@ export default function StudentPage({ studentId, onBack }) {
         full_name: cleanName,
         matric_no: cleanMatric,
         detail: cleanDetail,
+        group_id: groupId || null,
       })
       .eq('id', studentId)
 
@@ -128,12 +144,13 @@ export default function StudentPage({ studentId, onBack }) {
       }
     } else {
       setSuccess('Student details updated successfully.')
-      setStudent((prev) => ({
-        ...prev,
-        full_name: cleanName,
-        matric_no: cleanMatric,
-        detail: cleanDetail,
-      }))
+      // Refresh student with joined group
+      const { data: updated } = await supabase
+        .from('students')
+        .select('*, student_groups(id, name, color, lead_teacher:lead_teacher_id(full_name))')
+        .eq('id', studentId)
+        .maybeSingle()
+      if (updated) setStudent(updated)
       setTimeout(() => setSuccess(''), 4000)
     }
   }
@@ -177,7 +194,10 @@ export default function StudentPage({ studentId, onBack }) {
             {/* Top overview heading */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
-                <h1 className="text-2xl font-extrabold sm:text-3xl">{student.full_name}</h1>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-2xl font-extrabold sm:text-3xl text-ink">{student.full_name}</h1>
+                  <GroupBadge group={student.student_groups} size="md" showUnassigned />
+                </div>
                 <p className="mt-1 text-sm text-ink/60">
                   {student.matric_no ? (
                     <span className="font-semibold text-ink">Matric: {student.matric_no}</span>
@@ -241,6 +261,25 @@ export default function StudentPage({ studentId, onBack }) {
                     placeholder="e.g. Senior Class, Age 12, or Choir"
                     className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-ink" htmlFor="edit-group">
+                    Student Group
+                  </label>
+                  <select
+                    id="edit-group"
+                    value={groupId}
+                    onChange={(e) => setGroupId(e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                  >
+                    <option value="">Unassigned</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {error && <p className="text-xs font-bold text-red-700">{error}</p>}

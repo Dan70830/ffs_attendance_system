@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { ArrowLeftIcon, Brand, DoorOpenIcon, UndoIcon, ArrowRightIcon } from './Icons'
+import GroupBadge from './GroupBadge'
 
 function formatEventDate(dateStr) {
   if (!dateStr) return ''
@@ -44,10 +45,12 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
       setEvent(eData)
     }
 
-    // Load students present at this event
+    // Load students present at this event with historical group tracking
     const { data: aData } = await supabase
       .from('attendance')
-      .select('id, created_at, students(id, full_name, matric_no, detail)')
+      .select(
+        'id, created_at, group_id, student_groups(id, name, color), students(id, full_name, matric_no, detail, student_groups(id, name, color))'
+      )
       .eq('event_id', eventId)
       .order('created_at', { ascending: false })
 
@@ -71,7 +74,9 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
 
       const { data: aData } = await supabase
         .from('attendance')
-        .select('id, created_at, students(id, full_name, matric_no, detail)')
+        .select(
+          'id, created_at, group_id, student_groups(id, name, color), students(id, full_name, matric_no, detail, student_groups(id, name, color))'
+        )
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
 
@@ -311,7 +316,10 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
                         className="flex items-center justify-between gap-3 py-3.5"
                       >
                         <div className="min-w-0">
-                          <p className="font-bold text-ink">{st?.full_name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-bold text-ink">{st?.full_name}</p>
+                            <GroupBadge group={record.student_groups || st?.student_groups} size="xs" />
+                          </div>
                           <p className="text-xs text-ink/60">
                             {st?.matric_no ? (
                               <span className="font-medium text-ink/80">{st.matric_no}</span>

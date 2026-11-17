@@ -15,7 +15,9 @@ import {
   XIcon,
   CheckCircleIcon,
   ClockIcon,
+  TagIcon,
 } from './Icons'
+import GroupBadge from './GroupBadge'
 
 function formatLagosDate(dateStr) {
   if (!dateStr) return ''
@@ -42,11 +44,14 @@ export default function Home({
   profile,
   onOpenDashboard,
   onManageTeachers,
+  onManageGroups,
   onSelectStudent,
   onSelectEvent,
 }) {
   const [events, setEvents] = useState([])
   const [students, setStudents] = useState([])
+  const [groups, setGroups] = useState([])
+  const [groupFilter, setGroupFilter] = useState('all') // 'all' | 'unassigned' | groupId
   const [studentSearch, setStudentSearch] = useState('')
   const [showCreateEvent, setShowCreateEvent] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
@@ -64,6 +69,7 @@ export default function Home({
   const [name, setName] = useState('')
   const [matricNo, setMatricNo] = useState('')
   const [detail, setDetail] = useState('')
+  const [selectedGroupId, setSelectedGroupId] = useState('')
   const [addMsg, setAddMsg] = useState('')
   const [addError, setAddError] = useState('')
   const [savingStudent, setSavingStudent] = useState(false)
@@ -86,12 +92,24 @@ export default function Home({
   async function loadStudents() {
     const { data } = await supabase
       .from('students')
-      .select('id, full_name, matric_no, detail, active, created_at')
+      .select('id, full_name, matric_no, detail, active, created_at, group_id, student_groups(id, name, color)')
       .eq('active', true)
       .order('full_name')
 
     if (data) {
       setStudents(data)
+    }
+  }
+
+  async function loadGroups() {
+    const { data } = await supabase
+      .from('student_groups')
+      .select('id, name, color, lead_teacher_id')
+      .eq('active', true)
+      .order('name')
+
+    if (data) {
+      setGroups(data)
     }
   }
 
@@ -115,11 +133,20 @@ export default function Home({
 
     supabase
       .from('students')
-      .select('id, full_name, matric_no, detail, active, created_at')
+      .select('id, full_name, matric_no, detail, active, created_at, group_id, student_groups(id, name, color)')
       .eq('active', true)
       .order('full_name')
       .then(({ data }) => {
         if (active && data) setStudents(data)
+      })
+
+    supabase
+      .from('student_groups')
+      .select('id, name, color, lead_teacher_id')
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => {
+        if (active && data) setGroups(data)
       })
 
     return () => {
@@ -203,6 +230,7 @@ export default function Home({
       full_name: cleanName,
       matric_no: cleanMatric,
       detail: cleanDetail,
+      group_id: selectedGroupId || null,
       active: true,
     })
 
@@ -219,7 +247,9 @@ export default function Home({
       setName('')
       setMatricNo('')
       setDetail('')
+      setSelectedGroupId('')
       loadStudents()
+      loadGroups()
       setTimeout(() => {
         setAddMsg('')
         setShowAddStudent(false)
@@ -246,12 +276,23 @@ export default function Home({
   )
   const openRoomToday = todaysEvents.find((e) => e.status === 'open')
 
+  const myLeadGroup = groups.find((g) => g.lead_teacher_id === profile?.id)
+
   const searchTerm = studentSearch.trim().toLowerCase()
   const filteredStudents = students.filter((s) => {
+    // Group filter
+    if (groupFilter === 'unassigned') {
+      if (s.group_id) return false
+    } else if (groupFilter !== 'all') {
+      if (s.group_id !== groupFilter) return false
+    }
+
     if (!searchTerm) return true
     const nameMatch = s.full_name?.toLowerCase().includes(searchTerm)
     const matricMatch = s.matric_no?.toLowerCase().includes(searchTerm)
-    return nameMatch || matricMatch
+    const detailMatch = s.detail?.toLowerCase().includes(searchTerm)
+    const groupNameMatch = s.student_groups?.name?.toLowerCase().includes(searchTerm)
+    return nameMatch || matricMatch || detailMatch || groupNameMatch
   })
 
   return (
@@ -273,16 +314,23 @@ export default function Home({
                 <button
                   type="button"
                   onClick={onOpenDashboard}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-brand bg-brand/5 px-3.5 py-2 text-xs font-extrabold text-brand transition-colors hover:bg-brand/10 active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-brand bg-brand/5 px-3.5 py-2 text-xs font-extrabold text-brand transition-colors hover:bg-brand/10 active:scale-95 cursor-pointer"
                 >
                   <BarChartIcon className="h-4 w-4" /> Attendance dashboard
                 </button>
                 <button
                   type="button"
                   onClick={onManageTeachers}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 cursor-pointer"
                 >
                   <UsersIcon className="h-4 w-4 text-ink/60" /> Manage teachers
+                </button>
+                <button
+                  type="button"
+                  onClick={onManageGroups}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 cursor-pointer"
+                >
+                  <TagIcon className="h-4 w-4 text-ink/60" /> Student groups
                 </button>
               </>
             )}
@@ -631,26 +679,90 @@ export default function Home({
                 </button>
               </div>
 
-              {/* Search bar */}
-              <div className="relative mt-4">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <SearchIcon className="h-4 w-4 text-ink/40" />
+              {/* Search bar & Group Filter */}
+              <div className="mt-4 space-y-2.5">
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                    <SearchIcon className="h-4 w-4 text-ink/40" />
+                  </div>
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="Search name, matric, or group…"
+                    className="w-full rounded-xl border border-line bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                  />
+                  {studentSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setStudentSearch('')}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs font-bold text-ink/40 hover:text-ink cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="text"
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                  placeholder="Search name or matric number…"
-                  className="w-full rounded-xl border border-line bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
-                />
-                {studentSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setStudentSearch('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs font-bold text-ink/40 hover:text-ink"
-                  >
-                    ✕
-                  </button>
+
+                {/* Group Filter Chips */}
+                {groups.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
+                    <button
+                      type="button"
+                      onClick={() => setGroupFilter('all')}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        groupFilter === 'all'
+                          ? 'bg-brand text-white shadow-2xs'
+                          : 'bg-mist text-ink/70 hover:bg-line/40'
+                      }`}
+                    >
+                      All ({students.length})
+                    </button>
+
+                    {myLeadGroup && (
+                      <button
+                        type="button"
+                        onClick={() => setGroupFilter(myLeadGroup.id)}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          groupFilter === myLeadGroup.id
+                            ? 'bg-brand text-white shadow-2xs'
+                            : 'bg-brand/10 text-brand border border-brand/20 hover:bg-brand/15'
+                        }`}
+                      >
+                        ★ My Group ({students.filter((s) => s.group_id === myLeadGroup.id).length})
+                      </button>
+                    )}
+
+                    {groups.map((g) => {
+                      if (myLeadGroup && g.id === myLeadGroup.id) return null
+                      const count = students.filter((s) => s.group_id === g.id).length
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => setGroupFilter(g.id)}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                            groupFilter === g.id
+                              ? 'bg-brand text-white shadow-2xs'
+                              : 'bg-mist text-ink/70 hover:bg-line/40'
+                          }`}
+                        >
+                          {g.name} ({count})
+                        </button>
+                      )
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setGroupFilter('unassigned')}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        groupFilter === 'unassigned'
+                          ? 'bg-amber-800 text-white shadow-2xs'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                      }`}
+                    >
+                      Unassigned ({students.filter((s) => !s.group_id).length})
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -661,7 +773,7 @@ export default function Home({
                 </div>
               ) : filteredStudents.length === 0 ? (
                 <div className="mt-4 rounded-xl border border-dashed border-line bg-mist/20 p-6 text-center text-xs text-ink/60">
-                  No students matching &ldquo;{studentSearch}&rdquo;.
+                  No students matching &ldquo;{studentSearch || groupFilter}&rdquo;.
                 </div>
               ) : (
                 <ul className="mt-4 max-h-[580px] divide-y divide-line overflow-y-auto rounded-xl border border-line">
@@ -672,9 +784,12 @@ export default function Home({
                       className="group flex cursor-pointer items-center justify-between gap-3 p-3.5 transition-colors hover:bg-mist/50"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold text-ink text-sm sm:text-base group-hover:text-brand">
-                          {s.full_name}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-bold text-ink text-sm sm:text-base group-hover:text-brand">
+                            {s.full_name}
+                          </p>
+                          <GroupBadge group={s.student_groups} size="xs" />
+                        </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink/60">
                           {s.matric_no ? (
                             <span className="font-semibold text-brand">
@@ -769,7 +884,7 @@ export default function Home({
                       setMobileMenuOpen(false)
                       onManageTeachers()
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl border border-line bg-white p-3 text-left transition-colors hover:bg-mist"
+                    className="flex w-full items-center gap-3 rounded-xl border border-line bg-white p-3 text-left transition-colors hover:bg-mist cursor-pointer"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-mist text-ink/70">
                       <UsersIcon className="h-4 w-4" />
@@ -777,6 +892,23 @@ export default function Home({
                     <div>
                       <p className="text-xs font-bold text-ink">Manage Teachers</p>
                       <p className="text-[11px] text-ink/60">Approve & manage access</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      onManageGroups()
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-line bg-white p-3 text-left transition-colors hover:bg-mist cursor-pointer"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-mist text-ink/70">
+                      <TagIcon className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-ink">Student Groups</p>
+                      <p className="text-[11px] text-ink/60">Manage groups & lead teachers</p>
                     </div>
                   </button>
                 </div>
@@ -985,6 +1117,27 @@ export default function Home({
                   className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
                 />
               </div>
+
+              {groups.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-ink" htmlFor="add-student-group">
+                    Student Group <span className="font-normal text-ink/50">(optional)</span>
+                  </label>
+                  <select
+                    id="add-student-group"
+                    value={selectedGroupId}
+                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                  >
+                    <option value="">Leave unassigned</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {addError && <p className="mt-3 text-xs font-bold text-red-700">{addError}</p>}

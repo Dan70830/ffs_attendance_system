@@ -5,6 +5,7 @@ import Home from './Home'
 import Kiosk from './Kiosk'
 import WaitingApproval from './WaitingApproval'
 import ManageTeachers from './ManageTeachers'
+import ManageGroups from './ManageGroups'
 import StudentPage from './StudentPage'
 import EventPage from './EventPage'
 import UpdatePassword from './UpdatePassword'
@@ -173,6 +174,15 @@ export default function App() {
     )
   }
 
+  if (screen === 'manage-groups' && profile.role === 'principal') {
+    return (
+      <ManageGroups
+        profile={profile}
+        onBack={() => setScreen('home')}
+      />
+    )
+  }
+
   if (screen === 'student' && selectedStudentId) {
     return (
       <StudentPage
@@ -217,6 +227,7 @@ export default function App() {
       profile={profile}
       onOpenDashboard={() => setScreen('dashboard')}
       onManageTeachers={() => setScreen('manage-teachers')}
+      onManageGroups={() => setScreen('manage-groups')}
       onSelectStudent={(student) => {
         setSelectedStudentId(student.id)
         setScreen('student')

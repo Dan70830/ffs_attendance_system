@@ -11,6 +11,8 @@ import {
   ChevronRightIcon,
   CheckIcon,
 } from './Icons'
+import GroupBadge from './GroupBadge'
+import GroupBarChart from './GroupBarChart'
 
 function formatLagosDate(dateStr) {
   if (!dateStr) return ''
@@ -69,14 +71,18 @@ export default function AttendanceDashboard({
 }) {
   const [events, setEvents] = useState([])
   const [students, setStudents] = useState([])
+  const [groups, setGroups] = useState([])
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Navigation tab: 'events' | 'students' | 'followup'
+  // Navigation tab: 'events' | 'students' | 'groups' | 'followup'
   const [activeTab, setActiveTab] = useState('events')
 
   // Selected event for deep breakdown modal/card
   const [selectedEventId, setSelectedEventId] = useState(null)
+
+  // Selected event for group analytics (default 'latest')
+  const [selectedGroupEventId, setSelectedGroupEventId] = useState('latest')
 
   // Filters & search
   const [studentSearch, setStudentSearch] = useState('')
@@ -88,7 +94,7 @@ export default function AttendanceDashboard({
     async function loadData() {
       setLoading(true)
 
-      const [eventsRes, studentsRes, attendanceRes] = await Promise.all([
+      const [eventsRes, studentsRes, attendanceRes, groupsRes] = await Promise.all([
         supabase
           .from('events')
           .select('id, title, event_date, status, created_at, opened_at, closed_at')
@@ -96,13 +102,18 @@ export default function AttendanceDashboard({
           .order('created_at', { ascending: false }),
         supabase
           .from('students')
-          .select('id, full_name, matric_no, detail, active, created_at')
+          .select('id, full_name, matric_no, detail, active, created_at, group_id, student_groups(id, name, color)')
           .eq('active', true)
           .order('full_name'),
         supabase
           .from('attendance')
-          .select('id, event_id, student_id, created_at, marked_by, profiles:marked_by(full_name)')
+          .select('id, event_id, student_id, created_at, group_id, student_groups(id, name, color), marked_by, profiles:marked_by(full_name)')
           .order('created_at', { ascending: false }),
+        supabase
+          .from('student_groups')
+          .select('*, lead_teacher:lead_teacher_id(id, full_name, email)')
+          .eq('active', true)
+          .order('name'),
       ])
 
       if (!mounted) return
@@ -110,6 +121,7 @@ export default function AttendanceDashboard({
       setEvents(eventsRes.data || [])
       setStudents(studentsRes.data || [])
       setAttendance(attendanceRes.data || [])
+      setGroups(groupsRes.data || [])
       setLoading(false)
     }
 
@@ -280,6 +292,49 @@ export default function AttendanceDashboard({
     }
   }, [selectedEventId, events, attendanceByEvent, students])
 
+  // Group Attendance Statistics Calculation
+  const targetGroupEvent = useMemo(() => {
+    if (selectedGroupEventId === 'latest') {
+      return eligibleEvents[0] || null
+    }
+    return eligibleEvents.find((e) => e.id === selectedGroupEventId) || null
+  }, [eligibleEvents, selectedGroupEventId])
+
+  const groupStats = useMemo(() => {
+    if (!groups || groups.length === 0) return []
+
+    const presentRecordsForEvent = targetGroupEvent
+      ? attendance.filter((a) => a.event_id === targetGroupEvent.id)
+      : []
+
+    return groups.map((g) => {
+      // Total students currently in group
+      const groupStudents = students.filter((s) => s.group_id === g.id)
+      const totalStudents = groupStudents.length
+
+      // Count students present in this group for the target event
+      // Uses historical group snapshot if present, falls back to student's current group
+      const presentCount = presentRecordsForEvent.filter((a) => {
+        const histGroupId = a.group_id || a.student_groups?.id
+        if (histGroupId) return histGroupId === g.id
+        const st = students.find((s) => s.id === a.student_id)
+        return st?.group_id === g.id
+      }).length
+
+      const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0
+
+      return {
+        id: g.id,
+        name: g.name,
+        color: g.color || '#0b5d5b',
+        leadTeacher: g.lead_teacher?.full_name || null,
+        totalStudents,
+        presentCount,
+        rate,
+      }
+    })
+  }, [groups, students, attendance, targetGroupEvent])
+
   // Export functions
   function exportEventsSummary() {
     const header = ['Event Date', 'Event Title', 'Status', 'Present Count', 'Total Active Students', 'Turnout Rate (%)']
@@ -299,10 +354,11 @@ export default function AttendanceDashboard({
   }
 
   function exportStudentRates() {
-    const header = ['Full Name', 'Matric Number', 'Detail', 'Events Attended', 'Total Events', 'Attendance Rate (%)']
+    const header = ['Full Name', 'Matric Number', 'Group', 'Detail', 'Events Attended', 'Total Events', 'Attendance Rate (%)']
     const rows = studentRates.map((s) => [
       s.full_name,
       s.matric_no || 'None',
+      s.student_groups?.name || 'Unassigned',
       s.detail || '',
       s.attendedCount,
       s.totalCount,
@@ -311,11 +367,31 @@ export default function AttendanceDashboard({
     downloadCSV(`FFS_Student_Attendance_Rates_${today()}.csv`, [header, ...rows])
   }
 
+  function exportGroupAnalytics() {
+    const eventName = targetGroupEvent?.title || 'Selected Session'
+    const eventDate = targetGroupEvent?.event_date || today()
+    const header = ['Group Name', 'Lead Teacher', 'Total Assigned Students', 'Students Present', 'Turnout Rate (%)']
+    const rows = groupStats.map((g) => [
+      g.name,
+      g.leadTeacher || 'None',
+      g.totalStudents,
+      g.presentCount,
+      `${g.rate}%`,
+    ])
+    downloadCSV(`FFS_Group_Attendance_${eventName.replace(/\s+/g, '_')}_${eventDate}.csv`, [
+      [`Event: ${eventName}`, `Date: ${eventDate}`],
+      [''],
+      header,
+      ...rows,
+    ])
+  }
+
   function exportFollowUpList() {
-    const header = ['Full Name', 'Matric Number', 'Detail', 'Consecutive Missed Events', 'Last Attended Event', 'Last Attended Date']
+    const header = ['Full Name', 'Matric Number', 'Group', 'Detail', 'Consecutive Missed Events', 'Last Attended Event', 'Last Attended Date']
     const rows = followUpStudents.map(({ student, consecutiveMisses, lastAttended }) => [
       student.full_name,
       student.matric_no || 'None',
+      student.student_groups?.name || 'Unassigned',
       student.detail || '',
       consecutiveMisses,
       lastAttended ? lastAttended.title : 'Never attended',
@@ -334,11 +410,12 @@ export default function AttendanceDashboard({
       ['Total Present:', present.length],
       ['Total Absent:', absent.length],
       [''],
-      ['Status', 'Full Name', 'Matric Number', 'Detail', 'Check-in Time', 'Marked By'],
+      ['Status', 'Full Name', 'Matric Number', 'Group', 'Detail', 'Check-in Time', 'Marked By'],
       ...present.map(({ student, record }) => [
         'Present',
         student.full_name,
         student.matric_no || 'None',
+        student.student_groups?.name || record.student_groups?.name || 'Unassigned',
         student.detail || '',
         formatCheckInTime(record.created_at),
         record.profiles?.full_name || 'Teacher',
@@ -347,6 +424,7 @@ export default function AttendanceDashboard({
         'Absent',
         s.full_name,
         s.matric_no || 'None',
+        s.student_groups?.name || 'Unassigned',
         s.detail || '',
         '-',
         '-',
@@ -461,7 +539,7 @@ export default function AttendanceDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveTab('students')}
-                  className={`rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all ${
+                  className={`rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
                     activeTab === 'students'
                       ? 'bg-brand text-white shadow-2xs'
                       : 'bg-white text-ink/70 hover:bg-mist'
@@ -471,8 +549,19 @@ export default function AttendanceDashboard({
                 </button>
                 <button
                   type="button"
+                  onClick={() => setActiveTab('groups')}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
+                    activeTab === 'groups'
+                      ? 'bg-brand text-white shadow-2xs'
+                      : 'bg-white text-ink/70 hover:bg-mist'
+                  }`}
+                >
+                  Group analytics ({groups.length})
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveTab('followup')}
-                  className={`relative rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all ${
+                  className={`relative rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
                     activeTab === 'followup'
                       ? 'bg-brand text-white shadow-2xs'
                       : 'bg-white text-ink/70 hover:bg-mist'
@@ -673,6 +762,7 @@ export default function AttendanceDashboard({
                       <thead className="border-b border-line bg-mist/60 text-xs font-extrabold text-ink/60">
                         <tr>
                           <th className="px-5 py-3.5">Student</th>
+                          <th className="px-4 py-3.5">Group</th>
                           <th className="px-4 py-3.5">Matric No.</th>
                           <th className="px-4 py-3.5">Detail</th>
                           <th className="px-4 py-3.5 text-center">Attended</th>
@@ -682,7 +772,7 @@ export default function AttendanceDashboard({
                       <tbody className="divide-y divide-line">
                         {filteredStudentRates.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="p-8 text-center text-ink/60">
+                            <td colSpan={6} className="p-8 text-center text-ink/60">
                               No students match your search.
                             </td>
                           </tr>
@@ -695,6 +785,9 @@ export default function AttendanceDashboard({
                             >
                               <td className="px-5 py-3.5 font-bold text-ink">
                                 {s.full_name}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <GroupBadge group={s.student_groups} size="xs" />
                               </td>
                               <td className="px-4 py-3.5 text-ink/70">
                                 {s.matric_no ? (
@@ -747,6 +840,104 @@ export default function AttendanceDashboard({
                     </table>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB 3: GROUP ANALYTICS & COLOUR-CODED BAR CHART */}
+            {activeTab === 'groups' && (
+              <div className="space-y-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-ink">
+                      Student Group Attendance Analytics
+                    </h2>
+                    <p className="mt-0.5 text-xs text-ink/60">
+                      Colour-coded attendance breakdown and comparison across active student groups.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Event Session Selector */}
+                    {eligibleEvents.length > 0 && (
+                      <select
+                        value={selectedGroupEventId}
+                        onChange={(e) => setSelectedGroupEventId(e.target.value)}
+                        className="rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink shadow-2xs"
+                      >
+                        <option value="latest">
+                          Latest Session: {eligibleEvents[0]?.title} ({formatLagosDate(eligibleEvents[0]?.event_date)})
+                        </option>
+                        {eligibleEvents.slice(1).map((e) => (
+                          <option key={e.id} value={e.id}>
+                            {e.title} ({formatLagosDate(e.event_date)})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={exportGroupAnalytics}
+                      disabled={groups.length === 0}
+                      className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink hover:bg-mist disabled:opacity-50 cursor-pointer"
+                    >
+                      <DownloadIcon className="h-4 w-4" /> Export group CSV
+                    </button>
+                  </div>
+                </div>
+
+                {/* Colour-coded Bar Chart Component */}
+                <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+                  <GroupBarChart
+                    groupStats={groupStats}
+                    eventTitle={
+                      targetGroupEvent
+                        ? `${targetGroupEvent.title} (${formatLagosDate(targetGroupEvent.event_date)})`
+                        : 'Selected Session'
+                    }
+                  />
+                </div>
+
+                {/* Group Roster Summary Table */}
+                {groups.length > 0 && (
+                  <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
+                    <h3 className="text-base font-extrabold text-ink">Group Roster Summary</h3>
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="border-b border-line bg-mist/60 text-xs font-extrabold text-ink/60">
+                          <tr>
+                            <th className="px-5 py-3.5">Group</th>
+                            <th className="px-4 py-3.5">Lead Teacher</th>
+                            <th className="px-4 py-3.5 text-center">Assigned Students</th>
+                            <th className="px-4 py-3.5 text-center">Present in Session</th>
+                            <th className="px-4 py-3.5 text-right">Turnout Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-line">
+                          {groupStats.map((g) => (
+                            <tr key={g.id} className="transition-colors hover:bg-mist/40">
+                              <td className="px-5 py-3.5">
+                                <GroupBadge group={g} size="sm" />
+                              </td>
+                              <td className="px-4 py-3.5 text-xs font-semibold text-ink">
+                                {g.leadTeacher || <span className="italic text-ink/40">Not assigned</span>}
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-bold text-ink">
+                                {g.totalStudents}
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-black text-ok">
+                                {g.presentCount}
+                              </td>
+                              <td className="px-4 py-3.5 text-right font-black" style={{ color: g.color }}>
+                                {g.rate}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -806,9 +997,12 @@ export default function AttendanceDashboard({
                             )}
                           </div>
 
-                          <h3 className="mt-3 text-lg font-extrabold text-ink">
-                            {student.full_name}
-                          </h3>
+                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                            <h3 className="text-lg font-extrabold text-ink">
+                              {student.full_name}
+                            </h3>
+                            <GroupBadge group={student.student_groups} size="xs" />
+                          </div>
                           {student.detail && (
                             <p className="mt-0.5 text-xs font-medium text-ink/60">
                               {student.detail}
@@ -831,7 +1025,7 @@ export default function AttendanceDashboard({
                           <button
                             type="button"
                             onClick={() => onSelectStudent && onSelectStudent(student.id)}
-                            className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-line bg-mist/60 py-2 text-xs font-bold text-ink hover:bg-mist"
+                            className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-line bg-mist/60 py-2 text-xs font-bold text-ink hover:bg-mist cursor-pointer"
                           >
                             View student history <ChevronRightIcon className="h-3.5 w-3.5" />
                           </button>
@@ -876,14 +1070,14 @@ export default function AttendanceDashboard({
                 <button
                   type="button"
                   onClick={() => exportSingleEvent(selectedEventData)}
-                  className="rounded-lg border border-line bg-mist px-3 py-1.5 text-xs font-bold text-ink hover:bg-line/40"
+                  className="rounded-lg border border-line bg-mist px-3 py-1.5 text-xs font-bold text-ink hover:bg-line/40 cursor-pointer"
                 >
                   <DownloadIcon className="inline h-3.5 w-3.5" /> CSV
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedEventId(null)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-mist text-ink/60 hover:text-ink"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-mist text-ink/60 hover:text-ink cursor-pointer"
                 >
                   ✕
                 </button>
@@ -905,7 +1099,10 @@ export default function AttendanceDashboard({
                   <ul className="mt-3 divide-y divide-line/60">
                     {selectedEventData.present.map(({ student, record }) => (
                       <li key={student.id} className="py-2.5">
-                        <p className="font-bold text-ink">{student.full_name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-bold text-ink">{student.full_name}</p>
+                          <GroupBadge group={record.student_groups || student.student_groups} size="xs" />
+                        </div>
                         <p className="text-xs text-ink/60">
                           {student.matric_no ? student.matric_no : 'No matric'}
                           {record.created_at && ` · ${formatCheckInTime(record.created_at)}`}
@@ -929,7 +1126,10 @@ export default function AttendanceDashboard({
                   <ul className="mt-3 divide-y divide-line/60">
                     {selectedEventData.absent.map((student) => (
                       <li key={student.id} className="py-2.5">
-                        <p className="font-bold text-ink">{student.full_name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-bold text-ink">{student.full_name}</p>
+                          <GroupBadge group={student.student_groups} size="xs" />
+                        </div>
                         <p className="text-xs text-ink/60">
                           {student.matric_no ? student.matric_no : 'No matric'}
                           {student.detail && ` · ${student.detail}`}
