@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { ArrowLeftIcon, Brand, CheckCircleIcon } from './Icons'
+import { ArrowLeftIcon, CheckCircleIcon, TrashIcon } from './Icons'
 import GroupBadge from './GroupBadge'
 
 function formatDate(dateStr, timestamp) {
@@ -24,7 +24,7 @@ function formatTime(timestamp) {
   })
 }
 
-export default function StudentPage({ studentId, onBack }) {
+export default function StudentPage({ studentId, onBack, profile }) {
   const [student, setStudent] = useState(null)
   const [name, setName] = useState('')
   const [matricNo, setMatricNo] = useState('')
@@ -34,8 +34,31 @@ export default function StudentPage({ studentId, onBack }) {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  async function handleDeleteStudent() {
+    setDeleting(true)
+    try {
+      const { error: delErr } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', studentId)
+
+      if (delErr) {
+        alert('Could not delete student: ' + delErr.message)
+      } else {
+        setShowDeleteModal(false)
+        onBack()
+      }
+    } catch (err) {
+      alert('Error deleting student: ' + err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -156,22 +179,30 @@ export default function StudentPage({ studentId, onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-mist">
-      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Brand />
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to home</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-        </div>
-      </header>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer active:scale-95"
+        >
+          <ArrowLeftIcon className="h-4 w-4 text-ink/60" />
+          <span>Back to Students</span>
+        </button>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-8 sm:py-10">
+        {profile?.role === 'principal' && (
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-colors cursor-pointer active:scale-95"
+          >
+            <TrashIcon className="h-4 w-4 text-rose-600" />
+            <span>Delete Student</span>
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-6">
         {loading ? (
           <div className="py-12 text-center text-sm font-semibold text-ink/60">
             Loading student details…
@@ -184,13 +215,13 @@ export default function StudentPage({ studentId, onBack }) {
             </p>
             <button
               onClick={onBack}
-              className="mt-6 rounded-md bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+              className="mt-6 min-h-[38px] rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-dark cursor-pointer"
             >
               Return to home
             </button>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Top overview heading */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
@@ -208,13 +239,13 @@ export default function StudentPage({ studentId, onBack }) {
                 </p>
               </div>
 
-              <span className="inline-flex self-start rounded-full bg-brand/10 px-3 py-1 text-sm font-bold text-brand sm:self-auto">
+              <span className="inline-flex self-start rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand sm:self-auto">
                 {history.length} event{history.length === 1 ? '' : 's'} attended
               </span>
             </div>
 
             {/* Edit details card */}
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+            <section className="rounded-xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <h2 className="text-lg font-black text-ink sm:text-xl">Edit details</h2>
               <p className="mt-1 text-xs text-ink/60">
                 Update name, matric number, or descriptive notes.
@@ -222,7 +253,7 @@ export default function StudentPage({ studentId, onBack }) {
 
               <form onSubmit={handleSave} className="mt-5 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-ink" htmlFor="edit-name">
+                  <label className="block text-xs font-semibold text-ink/75" htmlFor="edit-name">
                     Full name *
                   </label>
                   <input
@@ -230,12 +261,12 @@ export default function StudentPage({ studentId, onBack }) {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line px-3.5 py-2.5 text-sm font-medium text-ink focus:border-brand"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-ink" htmlFor="edit-matric">
+                  <label className="block text-xs font-semibold text-ink/75" htmlFor="edit-matric">
                     Matric number
                   </label>
                   <input
@@ -243,7 +274,7 @@ export default function StudentPage({ studentId, onBack }) {
                     value={matricNo}
                     onChange={(e) => setMatricNo(e.target.value)}
                     placeholder="No matric number yet"
-                    className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line px-3.5 py-2.5 text-sm font-medium text-ink focus:border-brand"
                   />
                   <p className="mt-1 text-xs text-ink/50">
                     Required for student identification, but can be added or updated anytime.
@@ -251,7 +282,7 @@ export default function StudentPage({ studentId, onBack }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-ink" htmlFor="edit-detail">
+                  <label className="block text-xs font-semibold text-ink/75" htmlFor="edit-detail">
                     Detail (optional)
                   </label>
                   <input
@@ -259,19 +290,19 @@ export default function StudentPage({ studentId, onBack }) {
                     value={detail}
                     onChange={(e) => setDetail(e.target.value)}
                     placeholder="e.g. Senior Class, Age 12, or Choir"
-                    className="mt-1.5 w-full rounded-xl border border-line px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line px-3.5 py-2.5 text-sm font-medium text-ink focus:border-brand"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-ink" htmlFor="edit-group">
-                    Student Group
+                  <label className="block text-xs font-semibold text-ink/75" htmlFor="edit-group">
+                    Student group
                   </label>
                   <select
                     id="edit-group"
                     value={groupId}
                     onChange={(e) => setGroupId(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-medium focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm font-medium text-ink focus:border-brand"
                   >
                     <option value="">Unassigned</option>
                     {groups.map((g) => (
@@ -292,7 +323,7 @@ export default function StudentPage({ studentId, onBack }) {
                 <div className="pt-2">
                   <button
                     disabled={saving}
-                    className="w-full sm:w-auto rounded-xl bg-brand px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-brand-dark active:scale-[0.98] disabled:opacity-60"
+                    className="w-full sm:w-auto min-h-[42px] rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.98] disabled:opacity-60 cursor-pointer"
                   >
                     {saving ? 'Saving changes…' : 'Save changes'}
                   </button>
@@ -301,7 +332,7 @@ export default function StudentPage({ studentId, onBack }) {
             </section>
 
             {/* Attendance history card */}
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+            <section className="rounded-xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold sm:text-xl">Attendance history</h2>
@@ -309,7 +340,7 @@ export default function StudentPage({ studentId, onBack }) {
                     All events this student was marked present for, newest first.
                   </p>
                 </div>
-                <span className="rounded-full bg-mist px-3 py-1 text-xs font-extrabold text-ink">
+                <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-ink">
                   Total: {history.length}
                 </span>
               </div>
@@ -350,7 +381,65 @@ export default function StudentPage({ studentId, onBack }) {
             </section>
           </div>
         )}
-      </main>
+      </div>
+
+      {/* ============================================================== */}
+      {/* DELETE STUDENT CONFIRMATION MODAL (Principal only)             */}
+      {/* ============================================================== */}
+      {showDeleteModal && student && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-xs"
+          onClick={() => {
+            if (!deleting) setShowDeleteModal(false)
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-7 border border-line"
+          >
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 border border-rose-200">
+                <TrashIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink">Delete Student</h3>
+                <p className="text-xs text-ink/60">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50/50 p-3.5 text-xs text-rose-900 space-y-1">
+              <p>
+                Are you sure you want to permanently remove <strong className="font-bold text-rose-950">{student.full_name}</strong>
+                {student.matric_no ? ` (${student.matric_no})` : ''}?
+              </p>
+              <p className="text-[11px] text-rose-800/80">
+                All {history.length} associated attendance record{history.length === 1 ? '' : 's'} for this student will also be removed.
+              </p>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 min-h-[42px] rounded-lg border border-line bg-white py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDeleteStudent}
+                className="flex-1 min-h-[42px] rounded-lg bg-rose-600 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {deleting ? 'Deleting…' : 'Yes, Delete Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

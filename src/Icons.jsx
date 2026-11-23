@@ -36,6 +36,10 @@ export const ChevronRightIcon = ({ className = 'h-5 w-5' }) => (
   <svg {...base} className={className}><path d="M9 18l6-6-6-6" /></svg>
 )
 
+export const ChevronDownIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}><path d="M6 9l6 6 6-6" /></svg>
+)
+
 export const SearchIcon = ({ className = 'h-5 w-5' }) => (
   <svg {...base} className={className}>
     <circle cx="11" cy="11" r="8" />
@@ -177,6 +181,59 @@ export const TrashIcon = ({ className = 'h-5 w-5' }) => (
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     <line x1="10" y1="11" x2="10" y2="17" />
     <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+)
+
+export const DashboardIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+)
+
+export const GraduationCapIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+  </svg>
+)
+
+export const LayersIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
+  </svg>
+)
+
+export const BellIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+)
+
+export const SettingsIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+)
+
+export const HelpCircleIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+)
+
+export const BookOpenIcon = ({ className = 'h-5 w-5' }) => (
+  <svg {...base} className={className}>
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
   </svg>
 )
 

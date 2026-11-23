@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import {
   ArrowLeftIcon,
-  Brand,
   CheckCircleIcon,
   EditIcon,
   PlusIcon,
@@ -310,38 +309,34 @@ export default function ManageGroups({ onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-mist">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur-xs shadow-2xs">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-1.5 text-xs sm:text-sm font-bold text-ink hover:bg-mist transition-colors cursor-pointer"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              <span>Back</span>
-            </button>
-            <Brand />
-          </div>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
+      {/* Top action bar with back button and create group */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer active:scale-95"
+        >
+          <ArrowLeftIcon className="h-4 w-4 text-ink/60" />
+          <span>Back to Dashboard</span>
+        </button>
 
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark transition-all cursor-pointer"
-          >
-            <PlusIcon className="h-4 w-4" />
-            <span>Create group</span>
-          </button>
-        </div>
-      </header>
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark transition-all cursor-pointer active:scale-95"
+        >
+          <PlusIcon className="h-4 w-4" />
+          <span>Create group</span>
+        </button>
+      </div>
 
-      {/* Main Container */}
-      <main className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="space-y-6">
         {/* Page Title & Intro */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white shadow-2xs">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white shadow-2xs">
                 <TagIcon className="h-4 w-4" />
               </span>
               <h1 className="text-xl font-black tracking-tight text-ink sm:text-2xl">
@@ -356,7 +351,7 @@ export default function ManageGroups({ onBack }) {
           <button
             type="button"
             onClick={() => openBulkModal()}
-            className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer"
+            className="inline-flex min-h-[38px] items-center gap-2 rounded-lg border border-line bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer"
           >
             <UsersIcon className="h-4 w-4 text-brand" />
             <span>Bulk assign students</span>
@@ -373,31 +368,31 @@ export default function ManageGroups({ onBack }) {
 
         {/* Summary Stats Row */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/50">
-              Total Groups
+          <div className="rounded-xl border border-line bg-white p-4 shadow-2xs">
+            <p className="text-xs font-semibold text-ink/65">
+              Total groups
             </p>
             <p className="mt-1 text-2xl font-black text-ink">{groups.length}</p>
           </div>
-          <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/50">
-              Assigned Students
+          <div className="rounded-xl border border-line bg-white p-4 shadow-2xs">
+            <p className="text-xs font-semibold text-ink/65">
+              Assigned students
             </p>
             <p className="mt-1 text-2xl font-black text-brand">
               {students.length - unassignedStudents.length}
             </p>
           </div>
-          <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/50">
-              Unassigned Students
+          <div className="rounded-xl border border-line bg-white p-4 shadow-2xs">
+            <p className="text-xs font-semibold text-ink/65">
+              Unassigned students
             </p>
             <p className="mt-1 text-2xl font-black text-amber-700">
               {unassignedStudents.length}
             </p>
           </div>
-          <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/50">
-              Lead Teachers
+          <div className="rounded-xl border border-line bg-white p-4 shadow-2xs">
+            <p className="text-xs font-semibold text-ink/65">
+              Lead teachers
             </p>
             <p className="mt-1 text-2xl font-black text-ink">
               {new Set(groups.map((g) => g.lead_teacher_id).filter(Boolean)).size}
@@ -407,12 +402,12 @@ export default function ManageGroups({ onBack }) {
 
         {/* Groups Grid */}
         {loading ? (
-          <div className="rounded-2xl border border-line bg-white p-8 text-center text-sm font-semibold text-ink/60">
+          <div className="rounded-xl border border-line bg-white p-8 text-center text-sm font-semibold text-ink/60">
             Loading groups…
           </div>
         ) : groups.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line bg-white p-10 text-center space-y-3">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+          <div className="rounded-xl border border-dashed border-line bg-white p-10 text-center space-y-3">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
               <TagIcon className="h-6 w-6" />
             </div>
             <h3 className="text-base font-extrabold text-ink">No student groups created yet</h3>
@@ -421,7 +416,7 @@ export default function ManageGroups({ onBack }) {
             </p>
             <button
               onClick={openCreateModal}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-xs font-bold text-white shadow-2xs hover:bg-brand-dark"
+              className="mt-2 inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-brand px-4 py-2.5 text-xs font-bold text-white shadow-2xs hover:bg-brand-dark"
             >
               <PlusIcon className="h-4 w-4" /> Create group
             </button>
@@ -434,13 +429,13 @@ export default function ManageGroups({ onBack }) {
               return (
                 <div
                   key={g.id}
-                  className="flex flex-col justify-between rounded-2xl border border-line bg-white p-5 shadow-2xs transition-all hover:shadow-xs"
+                  className="flex flex-col justify-between rounded-xl border border-line bg-white p-5 shadow-2xs transition-all hover:shadow-xs"
                 >
                   <div className="space-y-3">
                     {/* Top Row: Color indicator & Badge */}
                     <div className="flex items-center justify-between gap-2">
                       <GroupBadge group={g} size="md" />
-                      <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-black text-ink">
+                      <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink">
                         {count} {count === 1 ? 'student' : 'students'}
                       </span>
                     </div>
@@ -456,9 +451,9 @@ export default function ManageGroups({ onBack }) {
                     </div>
 
                     {/* Lead Teacher */}
-                    <div className="rounded-xl border border-line/60 bg-mist/40 p-2.5 text-xs">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink/50 block">
-                        Lead Teacher
+                    <div className="rounded-lg border border-line/60 bg-mist/40 p-2.5 text-xs">
+                      <span className="text-[11px] font-semibold text-ink/50 block">
+                        Lead teacher
                       </span>
                       <p className="mt-0.5 font-bold text-ink truncate">
                         {g.lead_teacher?.full_name || (
@@ -483,7 +478,7 @@ export default function ManageGroups({ onBack }) {
                         type="button"
                         onClick={() => openEditModal(g)}
                         title="Edit group"
-                        className="rounded-lg p-1.5 text-ink/50 hover:bg-mist hover:text-ink transition-colors cursor-pointer"
+                        className="rounded-lg p-2 text-ink/50 hover:bg-mist hover:text-ink transition-colors cursor-pointer"
                       >
                         <EditIcon className="h-4 w-4" />
                       </button>
@@ -491,7 +486,7 @@ export default function ManageGroups({ onBack }) {
                         type="button"
                         onClick={() => setDeleteModalGroup(g)}
                         title="Delete group"
-                        className="rounded-lg p-1.5 text-red-600/70 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+                        className="rounded-lg p-2 text-red hover:bg-red/10 hover:text-red transition-colors cursor-pointer"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -505,9 +500,9 @@ export default function ManageGroups({ onBack }) {
 
         {/* Unassigned Students Notice Banner */}
         {unassignedStudents.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
                 <UsersIcon className="h-5 w-5" />
               </span>
               <div>
@@ -527,13 +522,13 @@ export default function ManageGroups({ onBack }) {
                 setBulkSearch('')
                 setBulkModalOpen(true)
               }}
-              className="rounded-xl bg-amber-800 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-amber-900 transition-colors cursor-pointer"
+              className="min-h-[38px] rounded-lg bg-amber-800 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-amber-900 transition-colors cursor-pointer"
             >
               Assign unassigned students
             </button>
           </div>
         )}
-      </main>
+      </div>
 
       {/* CREATE / EDIT GROUP MODAL */}
       {groupModal && (
@@ -542,7 +537,7 @@ export default function ManageGroups({ onBack }) {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-xs animate-in fade-in"
         >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-5">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="text-lg font-black text-ink">
                 {groupModal.mode === 'create' ? 'Create Student Group' : 'Edit Group'}
@@ -550,7 +545,7 @@ export default function ManageGroups({ onBack }) {
               <button
                 type="button"
                 onClick={() => setGroupModal(null)}
-                className="rounded-lg p-1 text-ink/40 hover:bg-mist hover:text-ink cursor-pointer"
+                className="rounded-lg p-1.5 text-ink/40 hover:bg-mist hover:text-ink cursor-pointer"
               >
                 <XIcon className="h-5 w-5" />
               </button>
@@ -558,7 +553,7 @@ export default function ManageGroups({ onBack }) {
 
             <form onSubmit={handleSaveGroup} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="group-name">
+                <label className="block text-xs font-semibold text-ink/75" htmlFor="group-name">
                   Group name *
                 </label>
                 <input
@@ -569,12 +564,12 @@ export default function ManageGroups({ onBack }) {
                   placeholder="e.g. Group Alpha, Tribe of Judah"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ink focus:border-brand focus:outline-hidden"
+                  className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ink focus:border-brand"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="group-desc">
+                <label className="block text-xs font-semibold text-ink/75" htmlFor="group-desc">
                   Description (optional)
                 </label>
                 <textarea
@@ -583,19 +578,19 @@ export default function ManageGroups({ onBack }) {
                   placeholder="Brief note or age group category"
                   value={groupDesc}
                   onChange={(e) => setGroupDesc(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-line bg-white px-3.5 py-2 text-sm text-ink focus:border-brand focus:outline-hidden"
+                  className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2 text-sm text-ink focus:border-brand"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="group-teacher">
-                  Lead Teacher
+                <label className="block text-xs font-semibold text-ink/75" htmlFor="group-teacher">
+                  Lead teacher
                 </label>
                 <select
                   id="group-teacher"
                   value={groupLeadId}
                   onChange={(e) => setGroupLeadId(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ink focus:border-brand focus:outline-hidden"
+                  className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm font-semibold text-ink focus:border-brand"
                 >
                   <option value="">No lead teacher assigned</option>
                   {teachers.map((t) => (
@@ -608,8 +603,8 @@ export default function ManageGroups({ onBack }) {
 
               {/* Group Colour Palette Picker */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink/75">
-                  Group Badge Colour
+                <label className="block text-xs font-semibold text-ink/75">
+                  Group badge colour
                 </label>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {PALETTE.map((p) => {
@@ -620,8 +615,8 @@ export default function ManageGroups({ onBack }) {
                         type="button"
                         onClick={() => setGroupColor(p.hex)}
                         title={p.name}
-                        className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all cursor-pointer ${
-                          isSelected ? 'ring-3 ring-offset-2 ring-brand scale-110' : 'hover:scale-105 opacity-80 hover:opacity-100'
+                        className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all cursor-pointer ${
+                          isSelected ? 'ring-2 ring-offset-2 ring-brand scale-105' : 'hover:scale-105 opacity-80 hover:opacity-100'
                         }`}
                         style={{ backgroundColor: p.hex }}
                       >
@@ -630,8 +625,8 @@ export default function ManageGroups({ onBack }) {
                     )
                   })}
                 </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[11px] text-ink/50">Preview:</span>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className="text-xs text-ink/50">Preview:</span>
                   <GroupBadge group={{ name: groupName || 'Sample Group', color: groupColor }} />
                 </div>
               </div>
@@ -646,14 +641,14 @@ export default function ManageGroups({ onBack }) {
                 <button
                   type="button"
                   onClick={() => setGroupModal(null)}
-                  className="rounded-xl border border-line px-4 py-2.5 text-xs font-bold text-ink/70 hover:bg-mist cursor-pointer"
+                  className="min-h-[40px] rounded-lg border border-line px-4 py-2 text-xs font-bold text-ink/70 hover:bg-mist cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionBusy}
-                  className="rounded-xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-2xs hover:bg-brand-dark disabled:opacity-60 cursor-pointer"
+                  className="min-h-[40px] rounded-lg bg-brand px-5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-brand-dark disabled:opacity-60 cursor-pointer"
                 >
                   {actionBusy ? 'Saving…' : groupModal.mode === 'create' ? 'Create group' : 'Save changes'}
                 </button>
@@ -670,7 +665,7 @@ export default function ManageGroups({ onBack }) {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in"
         >
-          <div className="flex h-full max-h-[90vh] w-full max-w-2xl flex-col justify-between rounded-2xl bg-white shadow-2xl">
+          <div className="flex h-full max-h-[90vh] w-full max-w-2xl flex-col justify-between rounded-xl bg-white shadow-2xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-line p-5">
               <div>
@@ -692,13 +687,13 @@ export default function ManageGroups({ onBack }) {
             <div className="bg-mist/50 border-b border-line p-4 space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex-1 min-w-[200px]">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-ink/70">
-                    Assign Selected Students To:
+                  <label className="block text-xs font-semibold text-ink/70">
+                    Assign selected students to:
                   </label>
                   <select
                     value={targetGroupId}
                     onChange={(e) => setTargetGroupId(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-line bg-white px-3 py-2 text-xs sm:text-sm font-bold text-ink focus:border-brand focus:outline-hidden"
+                    className="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-xs sm:text-sm font-bold text-ink focus:border-brand"
                   >
                     <option value="">Select target group…</option>
                     {groups.map((g) => (
@@ -715,11 +710,11 @@ export default function ManageGroups({ onBack }) {
                     type="button"
                     onClick={handleExecuteBulkAssignment}
                     disabled={actionBusy || selectedStudentIds.size === 0 || !targetGroupId}
-                    className="rounded-xl bg-brand px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer"
+                    className="min-h-[40px] rounded-lg bg-brand px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer"
                   >
                     {actionBusy
                       ? 'Assigning…'
-                      : `Assign ${selectedStudentIds.size} ${selectedStudentIds.size === 1 ? 'Student' : 'Students'}`}
+                      : `Assign ${selectedStudentIds.size} ${selectedStudentIds.size === 1 ? 'student' : 'students'}`}
                   </button>
                 </div>
               </div>
@@ -733,16 +728,16 @@ export default function ManageGroups({ onBack }) {
                     value={bulkSearch}
                     onChange={(e) => setBulkSearch(e.target.value)}
                     placeholder="Search name or matric…"
-                    className="w-full rounded-lg border border-line bg-white py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink/40"
+                    className="min-h-[38px] w-full rounded-lg border border-line bg-white py-2 pl-8 pr-3 text-xs text-ink placeholder:text-ink/40"
                   />
-                  <SearchIcon className="h-3.5 w-3.5 text-ink/40 absolute left-2.5 top-2.5" />
+                  <SearchIcon className="h-3.5 w-3.5 text-ink/40 absolute left-2.5 top-3" />
                 </div>
 
                 {/* Filter Roster */}
                 <select
                   value={bulkFilterGroup}
                   onChange={(e) => setBulkFilterGroup(e.target.value)}
-                  className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-ink"
+                  className="min-h-[38px] rounded-lg border border-line bg-white px-2.5 py-2 text-xs font-semibold text-ink"
                 >
                   <option value="all">Filter: All Students</option>
                   <option value="unassigned">Filter: Unassigned Only ({unassignedStudents.length})</option>
@@ -757,7 +752,7 @@ export default function ManageGroups({ onBack }) {
                 <button
                   type="button"
                   onClick={handleSelectAllFiltered}
-                  className="font-bold text-brand hover:underline cursor-pointer"
+                  className="min-h-[38px] inline-flex items-center font-bold text-brand hover:underline cursor-pointer"
                 >
                   Select / Deselect all ({filteredBulkStudents.length})
                 </button>
@@ -778,7 +773,7 @@ export default function ManageGroups({ onBack }) {
                   return (
                     <label
                       key={s.id}
-                      className={`flex cursor-pointer items-center justify-between gap-3 p-2.5 rounded-xl transition-colors ${
+                      className={`flex min-h-[44px] cursor-pointer items-center justify-between gap-3 p-2.5 rounded-lg transition-colors ${
                         isChecked ? 'bg-brand/10' : 'hover:bg-mist/50'
                       }`}
                     >
@@ -787,7 +782,7 @@ export default function ManageGroups({ onBack }) {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleStudentSelection(s.id)}
-                          className="h-4 w-4 rounded-md border-line text-brand focus:ring-brand cursor-pointer"
+                          className="h-4 w-4 rounded border-line text-brand focus:ring-brand cursor-pointer"
                         />
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm font-bold text-ink truncate">
@@ -822,7 +817,7 @@ export default function ManageGroups({ onBack }) {
               <button
                 type="button"
                 onClick={() => setBulkModalOpen(false)}
-                className="rounded-xl border border-line px-4 py-2 text-xs font-bold text-ink/70 hover:bg-mist cursor-pointer"
+                className="min-h-[38px] rounded-lg border border-line px-4 py-2 text-xs font-bold text-ink/70 hover:bg-mist cursor-pointer"
               >
                 Done
               </button>
@@ -838,19 +833,19 @@ export default function ManageGroups({ onBack }) {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-xs animate-in fade-in"
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl space-y-4">
             <h3 className="text-lg font-black text-ink">Delete Student Group?</h3>
             <p className="text-xs text-ink/70 leading-relaxed">
               Are you sure you want to delete <strong className="text-ink font-bold">&quot;{deleteModalGroup.name}&quot;</strong>?
             </p>
-            <p className="text-xs text-ink/60 bg-mist p-3 rounded-xl border border-line">
+            <p className="text-xs text-ink/60 bg-mist p-3 rounded-lg border border-line">
               Students assigned to this group will not be deleted; they will simply become <strong>Unassigned</strong>. Historical attendance records will remain intact.
             </p>
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setDeleteModalGroup(null)}
-                className="rounded-xl border border-line px-4 py-2 text-xs font-bold text-ink/70 hover:bg-mist cursor-pointer"
+                className="min-h-[40px] rounded-lg border border-line px-4 py-2 text-xs font-bold text-ink/70 hover:bg-mist cursor-pointer"
               >
                 Cancel
               </button>
@@ -858,7 +853,7 @@ export default function ManageGroups({ onBack }) {
                 type="button"
                 disabled={actionBusy}
                 onClick={() => handleDeleteGroup(deleteModalGroup)}
-                className="rounded-xl bg-red-700 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-red-800 disabled:opacity-60 cursor-pointer"
+                className="min-h-[40px] rounded-lg bg-red px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-red-800 disabled:opacity-60 cursor-pointer"
               >
                 {actionBusy ? 'Deleting…' : 'Delete Group'}
               </button>

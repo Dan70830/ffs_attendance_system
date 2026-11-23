@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { ArrowLeftIcon, Brand, DoorOpenIcon, UndoIcon, ArrowRightIcon } from './Icons'
+import { ArrowLeftIcon, DoorOpenIcon, UndoIcon, ArrowRightIcon, TrashIcon } from './Icons'
 import GroupBadge from './GroupBadge'
 
 function formatEventDate(dateStr) {
@@ -25,13 +25,31 @@ function formatCheckInTime(timestamp) {
   })
 }
 
-export default function EventPage({ eventId, onBack, onOpenKiosk }) {
+export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
   const [event, setEvent] = useState(null)
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
   const [actionBusy, setActionBusy] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [infoMsg, setInfoMsg] = useState('')
+
+  async function handleDeleteEvent() {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${event.title}" and its attendance check-in records? This action cannot be undone.`
+      )
+    ) {
+      return
+    }
+    setActionBusy(true)
+    const { error } = await supabase.from('events').delete().eq('id', eventId)
+    if (error) {
+      setErrorMsg('Could not delete session: ' + error.message)
+      setActionBusy(false)
+    } else {
+      onBack()
+    }
+  }
 
   async function loadEventData() {
     // Load event
@@ -116,7 +134,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
       .neq('id', eventId)
 
     if (openEvents && openEvents.length > 0) {
-      setErrorMsg('Another attendance room is already open. Close it first.')
+      setErrorMsg(`Another attendance room ("${openEvents[0].title}") is already open. Close it first before opening this room.`)
       setActionBusy(false)
       return
     }
@@ -173,22 +191,19 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
   }
 
   return (
-    <div className="min-h-screen bg-mist">
-      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Brand />
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to home</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-        </div>
-      </header>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer active:scale-95"
+        >
+          <ArrowLeftIcon className="h-4 w-4 text-ink/60" />
+          <span>Back to Dashboard</span>
+        </button>
+      </div>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-8 sm:py-10">
+      <div className="space-y-6">
         {loading ? (
           <div className="py-12 text-center text-sm font-semibold text-ink/60">
             Loading event details…
@@ -201,7 +216,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
             </p>
             <button
               onClick={onBack}
-              className="mt-6 rounded-md bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+              className="mt-6 min-h-[38px] rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-dark cursor-pointer"
             >
               Return to home
             </button>
@@ -209,13 +224,13 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
         ) : (
           <div className="space-y-6">
             {/* Event Header Information */}
-            <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+            <div className="rounded-xl border border-line bg-white p-5 shadow-2xs sm:p-7">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2.5">
                     <h1 className="text-2xl font-black text-ink sm:text-3xl">{event.title}</h1>
                     {event.status === 'open' && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/15 px-3 py-1 text-xs font-extrabold text-ok">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/15 px-3 py-1 text-xs font-bold text-ok">
                         <span className="h-2 w-2 rounded-full bg-ok animate-pulse" />
                         Room open
                       </span>
@@ -254,38 +269,64 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
                   <>
                     <button
                       onClick={() => onOpenKiosk(event)}
-                      className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-brand px-6 py-4 text-center text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.98] sm:text-lg"
+                      className="flex min-h-[48px] flex-1 items-center justify-center gap-2.5 rounded-lg bg-brand px-6 py-3.5 text-center text-sm font-extrabold text-white shadow-2xs transition-all hover:bg-brand-dark active:scale-[0.98] sm:text-base cursor-pointer"
                     >
-                      <DoorOpenIcon className="h-5 w-5 sm:h-6 sm:w-6" /> Open check-in screen
-                      <ArrowRightIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <DoorOpenIcon className="h-5 w-5" /> Open check-in screen
+                      <ArrowRightIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={handleCloseRoom}
                       disabled={actionBusy}
-                      className="rounded-xl border border-line bg-white px-5 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-mist active:scale-[0.98] disabled:opacity-50"
+                      className="min-h-[48px] rounded-lg border border-line bg-white px-5 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-mist active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                     >
                       {actionBusy ? 'Closing…' : 'Close room'}
                     </button>
+
+                    {profile?.role === 'principal' && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteEvent}
+                        disabled={actionBusy}
+                        className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50 cursor-pointer transition-colors"
+                      >
+                        <TrashIcon className="h-4 w-4 text-rose-600" />
+                        <span>Delete session</span>
+                      </button>
+                    )}
                   </>
                 ) : (
-                  <button
-                    onClick={handleOpenRoom}
-                    disabled={actionBusy}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-brand px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50"
-                  >
-                    <DoorOpenIcon className="h-5 w-5" />
-                    {actionBusy
-                      ? 'Opening…'
-                      : event.status === 'closed'
-                      ? 'Reopen attendance room'
-                      : 'Open attendance room'}
-                  </button>
+                  <>
+                    <button
+                      onClick={handleOpenRoom}
+                      disabled={actionBusy}
+                      className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    >
+                      <DoorOpenIcon className="h-5 w-5" />
+                      {actionBusy
+                        ? 'Opening…'
+                        : event.status === 'closed'
+                        ? 'Reopen attendance room'
+                        : 'Open attendance room'}
+                    </button>
+
+                    {profile?.role === 'principal' && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteEvent}
+                        disabled={actionBusy}
+                        className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50 cursor-pointer transition-colors"
+                      >
+                        <TrashIcon className="h-4 w-4 text-rose-600" />
+                        <span>Delete session</span>
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
 
             {/* Students Present Section */}
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
+            <section className="rounded-xl border border-line bg-white p-5 shadow-2xs sm:p-6">
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2 className="text-xl font-extrabold text-ink">Students present</h2>
@@ -332,7 +373,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
                         </div>
                         <button
                           onClick={() => handleUndo(record.id)}
-                          className="flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                          className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold text-red hover:bg-red/10 transition-colors cursor-pointer"
                         >
                           <UndoIcon className="h-3.5 w-3.5" /> Undo
                         </button>
@@ -344,7 +385,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk }) {
             </section>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }

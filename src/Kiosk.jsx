@@ -29,6 +29,13 @@ function getFirstName(fullName) {
   return parts[0] || 'Student'
 }
 
+function formatMatricEnding(matricNo) {
+  if (!matricNo) return null
+  const clean = matricNo.trim()
+  if (clean.length <= 3) return `Matric ends ${clean}`
+  return `Matric ends ${clean.slice(-3)}`
+}
+
 export default function Kiosk({ event, profile, email, onExit }) {
   const [currentEvent, setCurrentEvent] = useState(event)
   const [students, setStudents] = useState([])
@@ -188,7 +195,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
   if (!isRoomOpen) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-mist p-6 text-center">
-        <div className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 shadow-sm">
+        <div className="w-full max-w-sm rounded-xl border border-line bg-white p-8 shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-mist text-ink/60">
             <DoorOpenIcon className="h-7 w-7" />
           </div>
@@ -201,7 +208,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
           <button
             type="button"
             onClick={() => setExiting(true)}
-            className="mt-6 w-full rounded-xl bg-brand py-3.5 text-base font-bold text-white shadow-sm hover:bg-brand-dark"
+            className="mt-6 w-full min-h-[44px] rounded-lg bg-brand py-3 text-sm sm:text-base font-bold text-white shadow-sm hover:bg-brand-dark transition-colors cursor-pointer"
           >
             Teacher exit
           </button>
@@ -209,23 +216,23 @@ export default function Kiosk({ event, profile, email, onExit }) {
 
         {exiting && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-xs">
-            <form onSubmit={tryExit} className="w-full max-w-sm rounded-2xl bg-white p-6 text-left shadow-2xl">
+            <form onSubmit={tryExit} className="w-full max-w-sm rounded-xl bg-white p-6 text-left shadow-2xl">
               <h2 className="text-xl font-extrabold text-ink">Teacher password</h2>
-              <p className="mt-1 text-sm text-ink/60">Enter your password to leave the check-in screen.</p>
+              <p className="mt-1 text-sm text-ink/65">Enter your password to leave the check-in screen.</p>
               <input
                 autoFocus
                 type="password"
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
                 placeholder="Password"
-                className="mt-4 w-full rounded-xl border border-line px-4 py-3 text-base focus:border-brand focus:outline-hidden"
+                className="mt-4 w-full rounded-lg border border-line px-4 py-3 text-base focus:border-brand"
               />
-              {pwError && <p className="mt-2 text-sm font-semibold text-red-700">{pwError}</p>}
+              {pwError && <p className="mt-2 text-sm font-semibold text-red">{pwError}</p>}
               <div className="mt-6 flex gap-3">
                 <button
                   type="submit"
                   disabled={pwBusy}
-                  className="flex-1 rounded-xl bg-brand py-3 text-base font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                  className="flex-1 min-h-[44px] rounded-lg bg-brand py-2.5 text-sm font-bold text-white hover:bg-brand-dark transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {pwBusy ? 'Checking…' : 'Exit'}
                 </button>
@@ -236,7 +243,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                     setPw('')
                     setPwError('')
                   }}
-                  className="flex-1 rounded-xl border border-line bg-mist py-3 text-base font-bold text-ink hover:bg-line/40"
+                  className="flex-1 min-h-[44px] rounded-lg border border-line bg-white py-2.5 text-sm font-bold text-ink hover:bg-mist transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -325,13 +332,13 @@ export default function Kiosk({ event, profile, email, onExit }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Start typing your name or matric number…"
-            className="w-full rounded-2xl border-2 border-line bg-white py-4 pl-12 pr-12 text-lg font-medium text-ink shadow-xs transition-colors placeholder:text-ink/35 focus:border-brand focus:outline-hidden sm:py-5 sm:pl-14 sm:pr-14 sm:text-2xl"
+            className="w-full rounded-xl border-2 border-line bg-white py-4 pl-12 pr-12 text-lg font-medium text-ink transition-colors placeholder:text-ink/40 focus:border-brand sm:py-5 sm:pl-14 sm:pr-14 sm:text-2xl"
           />
           {q && (
             <button
               type="button"
               onClick={() => setQ('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-4 text-ink/40 hover:text-ink sm:pr-5"
+              className="absolute inset-y-0 right-0 flex items-center pr-4 text-ink/40 hover:text-ink sm:pr-5 cursor-pointer"
               aria-label="Clear search"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-mist text-sm font-bold">
@@ -344,7 +351,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
         {/* Matching Student Results */}
         {term.length >= 2 && matches.length > 0 && (
           <div className="mt-6 sm:mt-8">
-            <p className="text-xs font-extrabold uppercase tracking-wider text-ink/50 sm:text-sm">
+            <p className="text-sm font-bold text-ink/70 sm:text-base">
               Tap your name to check in
             </p>
             <ul className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
@@ -354,7 +361,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                     type="button"
                     onClick={() => setConfirmStudent(s)}
                     disabled={marking}
-                    className="group flex min-h-[72px] w-full flex-col justify-center rounded-2xl border-2 border-line bg-white p-4 text-left shadow-2xs transition-all hover:border-brand hover:shadow-md focus:border-brand focus:outline-hidden active:scale-[0.99] sm:p-5"
+                    className="group flex min-h-[72px] w-full flex-col justify-center rounded-xl border border-line bg-white p-4 text-left shadow-2xs transition-all hover:border-brand hover:shadow-xs focus:border-brand active:scale-[0.99] cursor-pointer sm:p-5"
                   >
                     <span className="text-lg font-extrabold text-ink group-hover:text-brand sm:text-xl">
                       {s.full_name}
@@ -362,7 +369,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium sm:text-sm">
                       {s.matric_no ? (
                         <span className="font-semibold text-brand">
-                          Matric: {s.matric_no}
+                          {formatMatricEnding(s.matric_no)}
                         </span>
                       ) : (
                         <span className="italic text-ink/40">No matric number yet</span>
@@ -383,7 +390,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
 
         {/* Empty state when query is >= 2 letters but no matches */}
         {term.length >= 2 && matches.length === 0 && (
-          <div className="mt-8 rounded-2xl border border-line bg-white p-6 text-center shadow-2xs sm:p-8">
+          <div className="mt-8 rounded-xl border border-line bg-white p-6 text-center shadow-2xs sm:p-8">
             <p className="text-base font-bold text-ink sm:text-lg">
               No student found matching &ldquo;{q}&rdquo;
             </p>
@@ -404,7 +411,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl sm:p-8"
           >
             <div className="text-center">
               <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand">
@@ -418,14 +425,14 @@ export default function Kiosk({ event, profile, email, onExit }) {
               </p>
             </div>
 
-            <div className="mt-6 rounded-2xl border-2 border-brand/20 bg-mist/50 p-5 text-center sm:p-6">
+            <div className="mt-6 rounded-xl border border-brand/20 bg-mist/50 p-5 text-center sm:p-6">
               <p className="text-2xl font-black text-ink sm:text-3xl">
                 {confirmStudent.full_name}
               </p>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base">
                 {confirmStudent.matric_no ? (
                   <span className="inline-flex items-center rounded-lg border border-line bg-white px-3 py-1 font-bold text-brand shadow-2xs">
-                    Matric: {confirmStudent.matric_no}
+                    {formatMatricEnding(confirmStudent.matric_no)}
                   </span>
                 ) : (
                   <span className="text-xs italic text-ink/40">No matric number yet</span>
@@ -443,7 +450,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                 type="button"
                 disabled={marking}
                 onClick={() => mark(confirmStudent)}
-                className="flex h-14 items-center justify-center gap-2 rounded-xl bg-ok px-4 text-base font-extrabold text-white shadow-md hover:bg-ok/90 active:scale-[0.98] disabled:opacity-50"
+                className="flex h-12 items-center justify-center gap-2 rounded-lg bg-ok px-4 text-sm sm:text-base font-extrabold text-white shadow-sm hover:bg-ok/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <CheckIcon className="h-5 w-5" />
                 {marking ? 'Marking…' : 'Yes, mark me present'}
@@ -452,7 +459,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                 type="button"
                 disabled={marking}
                 onClick={() => setConfirmStudent(null)}
-                className="flex h-14 items-center justify-center rounded-xl border-2 border-line bg-white px-4 text-base font-bold text-ink/80 hover:bg-mist active:scale-[0.98]"
+                className="flex h-12 items-center justify-center rounded-lg border border-line bg-white px-4 text-sm sm:text-base font-bold text-ink/80 hover:bg-mist active:scale-[0.98] cursor-pointer"
               >
                 Cancel
               </button>
@@ -466,7 +473,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
         <button
           type="button"
           onClick={() => setExiting(true)}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-ink/60 hover:bg-white hover:text-ink"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-sm font-semibold text-ink/75 hover:bg-mist hover:text-ink transition-colors cursor-pointer"
         >
           <SignOutIcon className="h-4 w-4" /> Teacher exit
         </button>
@@ -477,10 +484,10 @@ export default function Kiosk({ event, profile, email, onExit }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-xs">
           <form
             onSubmit={tryExit}
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl sm:p-7"
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl sm:p-7"
           >
             <h2 className="text-xl font-extrabold text-ink">Teacher password</h2>
-            <p className="mt-1 text-sm text-ink/60">
+            <p className="mt-1 text-sm text-ink/65">
               Enter your password to leave the check-in screen.
             </p>
             <div className="relative mt-4">
@@ -490,7 +497,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
                 placeholder="Your password"
-                className="w-full rounded-xl border border-line pl-4 pr-11 py-3 text-base focus:border-brand focus:outline-hidden"
+                className="w-full rounded-lg border border-line pl-4 pr-11 py-3 text-base focus:border-brand"
               />
               <button
                 type="button"
@@ -502,12 +509,12 @@ export default function Kiosk({ event, profile, email, onExit }) {
                 {showPw ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
               </button>
             </div>
-            {pwError && <p className="mt-2 text-sm font-semibold text-red-700">{pwError}</p>}
+            {pwError && <p className="mt-2 text-sm font-semibold text-red">{pwError}</p>}
             <div className="mt-6 flex gap-3">
               <button
                 type="submit"
                 disabled={pwBusy}
-                className="flex-1 rounded-xl bg-brand py-3 text-base font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                className="flex-1 min-h-[44px] rounded-lg bg-brand py-2.5 text-sm font-bold text-white hover:bg-brand-dark transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {pwBusy ? 'Checking…' : 'Exit'}
               </button>
@@ -518,7 +525,7 @@ export default function Kiosk({ event, profile, email, onExit }) {
                   setPw('')
                   setPwError('')
                 }}
-                className="flex-1 rounded-xl border border-line bg-mist py-3 text-base font-bold text-ink hover:bg-line/40"
+                className="flex-1 min-h-[44px] rounded-lg border border-line bg-white py-2.5 text-sm font-bold text-ink hover:bg-mist transition-colors cursor-pointer"
               >
                 Cancel
               </button>

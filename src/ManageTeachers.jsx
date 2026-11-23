@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { ArrowLeftIcon, ShieldCheckIcon, CheckCircleIcon, Brand } from './Icons'
+import { ArrowLeftIcon, ShieldCheckIcon, CheckCircleIcon } from './Icons'
 
 function formatRegistrationDate(timestamp) {
   if (!timestamp) return 'recently'
@@ -117,22 +117,19 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
   const activeList = teachers.filter((t) => t.approved)
 
   return (
-    <div className="min-h-screen bg-mist">
-      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Brand />
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to home</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-        </div>
-      </header>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer active:scale-95"
+        >
+          <ArrowLeftIcon className="h-4 w-4 text-ink/60" />
+          <span>Back to Dashboard</span>
+        </button>
+      </div>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-8 sm:py-10">
+      <div className="space-y-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">Manage teachers</h1>
@@ -153,11 +150,11 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
         ) : (
           <div className="mt-8 space-y-8">
             {/* List 1: Waiting for approval */}
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+            <section className="rounded-xl border border-line bg-white p-5 shadow-xs sm:p-7">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="text-lg font-black text-ink sm:text-xl">Waiting for approval</h2>
-                  <span className="rounded-full bg-sun/30 px-2.5 py-0.5 text-xs font-extrabold text-ink">
+                  <h2 className="text-lg font-bold text-ink sm:text-xl">Waiting for approval</h2>
+                  <span className="rounded-full bg-sun/20 px-2.5 py-0.5 text-xs font-bold text-ink">
                     {waitingList.length}
                   </span>
                 </div>
@@ -180,7 +177,7 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
                         className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="space-y-0.5">
-                          <p className="font-extrabold text-ink text-base sm:text-lg">
+                          <p className="font-bold text-ink text-base sm:text-lg">
                             {displayName}
                           </p>
                           {displayEmail && (
@@ -197,14 +194,14 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
                           <button
                             onClick={() => handleApprove(t)}
                             disabled={actionBusy}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                            className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-dark transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             <CheckCircleIcon className="h-4 w-4" /> Approve
                           </button>
                           <button
                             onClick={() => setConfirmModal({ type: 'pending', teacher: t })}
                             disabled={actionBusy}
-                            className="rounded-md border border-line px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                            className="min-h-[38px] rounded-lg border border-red/30 px-3 py-2 text-sm font-semibold text-red hover:bg-red/10 transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             Disapprove
                           </button>
@@ -217,11 +214,11 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
             </section>
 
             {/* List 2: Active */}
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
+            <section className="rounded-xl border border-line bg-white p-5 shadow-xs sm:p-7">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="text-lg font-black text-ink sm:text-xl">Active</h2>
-                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-extrabold text-brand">
+                  <h2 className="text-lg font-bold text-ink sm:text-xl">Active</h2>
+                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-bold text-brand">
                     {activeList.length}
                   </span>
                 </div>
@@ -248,7 +245,7 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
                       >
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-ink text-base sm:text-lg">
+                            <span className="font-bold text-ink text-base sm:text-lg">
                               {displayName}
                             </span>
                             {isSelf && (
@@ -285,7 +282,7 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
                             <button
                               onClick={() => setConfirmModal({ type: 'active', teacher: t })}
                               disabled={actionBusy}
-                              className="rounded-md border border-line px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                              className="min-h-[38px] rounded-lg border border-red/30 px-3 py-2 text-xs font-semibold text-red hover:bg-red/10 transition-colors disabled:opacity-50 cursor-pointer"
                             >
                               Disapprove
                             </button>
@@ -299,7 +296,7 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
             </section>
           </div>
         )}
-      </main>
+      </div>
 
       {/* Confirmation Modal */}
       {confirmModal && (
@@ -333,14 +330,14 @@ export default function ManageTeachers({ profile: currentProfile, onBack }) {
                     : handleDisapprovePending(confirmModal.teacher)
                 }
                 disabled={actionBusy}
-                className="flex-1 rounded-md bg-red-700 py-3 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-50"
+                className="flex-1 min-h-[44px] rounded-lg bg-red py-2.5 text-sm font-bold text-white hover:bg-red/90 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {actionBusy ? 'Updating…' : 'Confirm disapprove'}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmModal(null)}
-                className="flex-1 rounded-md border border-line bg-mist py-3 text-sm font-bold text-ink hover:bg-white"
+                className="flex-1 min-h-[44px] rounded-lg border border-line bg-white py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
               >
                 Cancel
               </button>

@@ -9,15 +9,19 @@ import ManageGroups from './ManageGroups'
 import StudentPage from './StudentPage'
 import EventPage from './EventPage'
 import UpdatePassword from './UpdatePassword'
-import AttendanceDashboard from './AttendanceDashboard'
+import AttendancePage from './AttendancePage'
+import ReportsPage from './ReportsPage'
+import AppLayout from './AppLayout'
 
 export default function App() {
   const [session, setSession] = useState(undefined)
   const [profile, setProfile] = useState(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [screen, setScreen] = useState('home')
+  const [homeTab, setHomeTab] = useState('overview')
   const [selectedStudentId, setSelectedStudentId] = useState(null)
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [navCounts, setNavCounts] = useState({ students: 0, groups: 0, pendingTeachers: 0 })
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(() =>
     typeof window !== 'undefined' ? window.location.hash.includes('type=recovery') : false
   )
@@ -60,6 +64,7 @@ export default function App() {
       } else {
         setProfile(null)
         setScreen('home')
+        setHomeTab('overview')
         setSelectedStudentId(null)
         setSelectedEvent(null)
       }
@@ -70,6 +75,54 @@ export default function App() {
       sub.subscription.unsubscribe()
     }
   }, [fetchProfile])
+
+  useEffect(() => {
+    if (!profile?.approved) return
+    let mounted = true
+    async function fetchCounts() {
+      try {
+        const [sRes, gRes, tRes] = await Promise.all([
+          supabase.from('students').select('id', { count: 'exact', head: true }).eq('active', true),
+          supabase.from('student_groups').select('id', { count: 'exact', head: true }).eq('active', true),
+          supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('approved', false),
+        ])
+
+        let myAssignedCount = 0
+        if (profile?.id) {
+          const { data: myGroup } = await supabase
+            .from('student_groups')
+            .select('id')
+            .eq('lead_teacher_id', profile.id)
+            .eq('active', true)
+            .maybeSingle()
+
+          if (myGroup) {
+            const { count: stCount } = await supabase
+              .from('students')
+              .select('id', { count: 'exact', head: true })
+              .eq('group_id', myGroup.id)
+              .eq('active', true)
+            myAssignedCount = stCount || 0
+          }
+        }
+
+        if (mounted) {
+          setNavCounts({
+            students: sRes.count || 0,
+            groups: gRes.count || 0,
+            pendingTeachers: tRes.count || 0,
+            myAssignedStudentsCount: myAssignedCount,
+          })
+        }
+      } catch {
+        // Non-critical background count
+      }
+    }
+    fetchCounts()
+    return () => {
+      mounted = false
+    }
+  }, [profile?.approved, profile?.id])
 
   // Password recovery flow
   if (isPasswordRecovery) {
@@ -121,13 +174,13 @@ export default function App() {
           <div className="mt-6 flex flex-col gap-2">
             <button
               onClick={() => fetchProfile(session.user.id)}
-              className="w-full rounded-md bg-brand py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+              className="w-full rounded-md bg-brand py-2.5 text-sm font-bold text-white hover:bg-brand-dark cursor-pointer"
             >
               Try again
             </button>
             <button
               onClick={() => supabase.auth.signOut()}
-              className="w-full rounded-md border border-line py-2.5 text-sm font-semibold text-ink/70 hover:bg-mist"
+              className="w-full rounded-md border border-line py-2.5 text-sm font-semibold text-ink/70 hover:bg-mist cursor-pointer"
             >
               Sign out
             </button>
@@ -137,7 +190,7 @@ export default function App() {
     )
   }
 
-  // Unapproved accounts: see ONLY the Waiting for approval screen (no student data loaded)
+  // Unapproved accounts: see ONLY the Waiting for approval screen
   if (!profile.approved) {
     return (
       <WaitingApproval
@@ -148,69 +201,7 @@ export default function App() {
     )
   }
 
-  // Approved accounts: Route based on screen
-  if (screen === 'dashboard' && profile.role === 'principal') {
-    return (
-      <AttendanceDashboard
-        onBack={() => setScreen('home')}
-        onSelectStudent={(studentId) => {
-          setSelectedStudentId(studentId)
-          setScreen('student')
-        }}
-        onSelectEvent={(evt) => {
-          setSelectedEvent(evt)
-          setScreen('event')
-        }}
-      />
-    )
-  }
-
-  if (screen === 'manage-teachers' && profile.role === 'principal') {
-    return (
-      <ManageTeachers
-        profile={profile}
-        onBack={() => setScreen('home')}
-      />
-    )
-  }
-
-  if (screen === 'manage-groups' && profile.role === 'principal') {
-    return (
-      <ManageGroups
-        profile={profile}
-        onBack={() => setScreen('home')}
-      />
-    )
-  }
-
-  if (screen === 'student' && selectedStudentId) {
-    return (
-      <StudentPage
-        studentId={selectedStudentId}
-        onBack={() => {
-          setSelectedStudentId(null)
-          setScreen('home')
-        }}
-      />
-    )
-  }
-
-  if (screen === 'event' && selectedEvent) {
-    return (
-      <EventPage
-        eventId={selectedEvent.id}
-        onBack={() => {
-          setSelectedEvent(null)
-          setScreen('home')
-        }}
-        onOpenKiosk={(evt) => {
-          setSelectedEvent(evt)
-          setScreen('kiosk')
-        }}
-      />
-    )
-  }
-
+  // Kiosk mode: Student self-check-in is standalone full-screen without admin navigation
   if (screen === 'kiosk' && selectedEvent) {
     return (
       <Kiosk
@@ -222,20 +213,116 @@ export default function App() {
     )
   }
 
+  // Navigation router function
+  const handleNavigate = (targetScreen, targetTab = 'overview') => {
+    setScreen(targetScreen)
+    if (targetScreen === 'home') {
+      setHomeTab(targetTab)
+    }
+  }
+
   return (
-    <Home
+    <AppLayout
       profile={profile}
-      onOpenDashboard={() => setScreen('dashboard')}
-      onManageTeachers={() => setScreen('manage-teachers')}
-      onManageGroups={() => setScreen('manage-groups')}
-      onSelectStudent={(student) => {
-        setSelectedStudentId(student.id)
-        setScreen('student')
-      }}
-      onSelectEvent={(evt) => {
-        setSelectedEvent(evt)
-        setScreen('event')
-      }}
-    />
+      currentScreen={screen}
+      currentTab={homeTab}
+      counts={navCounts}
+      onNavigate={handleNavigate}
+      onSignOut={() => supabase.auth.signOut()}
+    >
+      {/* Operational Attendance Workspace (Accessible to both Principals and Teachers) */}
+      {screen === 'attendance' && (
+        <AttendancePage
+          profile={profile}
+          onBack={() => handleNavigate('home', 'overview')}
+          onSelectEvent={(evt) => {
+            setSelectedEvent(evt)
+            setScreen('event')
+          }}
+          onOpenKiosk={(evt) => {
+            setSelectedEvent(evt)
+            setScreen('kiosk')
+          }}
+        />
+      )}
+
+      {/* Analytical Reports Workspace (Principal-only) */}
+      {(screen === 'reports' || screen === 'dashboard') && profile.role === 'principal' && (
+        <ReportsPage
+          onBack={() => handleNavigate('home', 'overview')}
+          onSelectStudent={(studentId) => {
+            setSelectedStudentId(studentId)
+            setScreen('student')
+          }}
+          onSelectEvent={(evt) => {
+            setSelectedEvent(evt)
+            setScreen('event')
+          }}
+        />
+      )}
+
+      {screen === 'manage-teachers' && profile.role === 'principal' && (
+        <ManageTeachers
+          profile={profile}
+          onBack={() => handleNavigate('home', 'overview')}
+        />
+      )}
+
+      {screen === 'manage-groups' && profile.role === 'principal' && (
+        <ManageGroups
+          profile={profile}
+          onBack={() => handleNavigate('home', 'overview')}
+        />
+      )}
+
+      {screen === 'student' && selectedStudentId && (
+        <StudentPage
+          studentId={selectedStudentId}
+          profile={profile}
+          onBack={() => {
+            setSelectedStudentId(null)
+            handleNavigate('home', 'students')
+          }}
+        />
+      )}
+
+      {screen === 'event' && selectedEvent && (
+        <EventPage
+          eventId={selectedEvent.id}
+          profile={profile}
+          onBack={() => {
+            setSelectedEvent(null)
+            handleNavigate('attendance')
+          }}
+          onOpenKiosk={(evt) => {
+            setSelectedEvent(evt)
+            setScreen('kiosk')
+          }}
+        />
+      )}
+
+      {screen === 'home' && (
+        <Home
+          profile={profile}
+          currentTab={homeTab}
+          onTabChange={(tab) => setHomeTab(tab)}
+          onOpenAttendance={() => setScreen('attendance')}
+          onOpenDashboard={() => setScreen(profile.role === 'principal' ? 'reports' : 'attendance')}
+          onManageTeachers={() => setScreen('manage-teachers')}
+          onManageGroups={() => setScreen('manage-groups')}
+          onSelectStudent={(student) => {
+            setSelectedStudentId(student.id)
+            setScreen('student')
+          }}
+          onSelectEvent={(evt) => {
+            setSelectedEvent(evt)
+            setScreen('event')
+          }}
+          onCountsLoaded={(c) => {
+            setNavCounts((prev) => ({ ...prev, ...c }))
+          }}
+        />
+      )}
+    </AppLayout>
   )
 }

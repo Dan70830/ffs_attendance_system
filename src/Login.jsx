@@ -162,7 +162,7 @@ export default function Login() {
   return (
     <div className="grid min-h-screen bg-mist lg:grid-cols-12">
       {/* Left hero section with natural photograph & localized text gradient */}
-      <div className="relative flex flex-col justify-between overflow-hidden p-6 sm:p-10 lg:col-span-6 lg:min-h-screen lg:p-12 xl:col-span-7 xl:p-16">
+      <div className="relative flex flex-col justify-between overflow-hidden p-6 sm:p-8 lg:col-span-6 lg:min-h-screen lg:p-12 xl:col-span-7 xl:p-16">
         {/* Supplied Classroom Photograph anchored at bottom so teachers and students are in clear view */}
         <img
           src="/ffs-hero.jpg"
@@ -182,7 +182,7 @@ export default function Login() {
             </div>
 
             <div className="pt-2 sm:pt-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white backdrop-blur-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-xs">
                 Attendance Portal
               </span>
               <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight text-white drop-shadow-md sm:text-3xl lg:text-4xl xl:text-5xl">
@@ -195,10 +195,10 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Lower section left completely clear over the teachers' faces */}
-          <div className="pt-32 sm:pt-44 lg:pt-0">
-            <div className="inline-block rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-xs">
-              <p className="text-[11px] font-bold text-white/90">
+          {/* Lower section left clear over the teachers' faces */}
+          <div className="pt-8 sm:pt-12 lg:pt-0">
+            <div className="inline-block rounded-lg border border-white/10 bg-black/35 px-3 py-1.5 backdrop-blur-xs">
+              <p className="text-xs font-medium text-white/90">
                 Firm Foundation School · Teachers & Principals
               </p>
             </div>
@@ -211,14 +211,14 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Tabs: Sign in & Create account */}
           {tab === 'signin' || tab === 'signup' ? (
-            <div className="flex rounded-2xl border border-line bg-mist p-1.5 shadow-2xs">
+            <div className="flex rounded-xl border border-line bg-mist p-1 shadow-xs">
               <button
                 type="button"
                 onClick={() => switchTab('signin')}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 min-h-[40px] rounded-lg py-2 text-sm font-bold transition-all cursor-pointer ${
                   tab === 'signin'
                     ? 'bg-white text-ink shadow-xs'
-                    : 'text-ink/60 hover:text-ink'
+                    : 'text-ink/65 hover:text-ink'
                 }`}
               >
                 Sign in
@@ -226,10 +226,10 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchTab('signup')}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 min-h-[40px] rounded-lg py-2 text-sm font-bold transition-all cursor-pointer ${
                   tab === 'signup'
                     ? 'bg-white text-ink shadow-xs'
-                    : 'text-ink/60 hover:text-ink'
+                    : 'text-ink/65 hover:text-ink'
                 }`}
               >
                 Create account
@@ -239,7 +239,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => switchTab('signin')}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-ink/60 hover:text-ink cursor-pointer"
+              className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-ink/70 hover:text-ink cursor-pointer"
             >
               ← Back to sign in
             </button>
@@ -258,7 +258,7 @@ export default function Login() {
 
               <div className="mt-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="signin-email">
+                  <label className="block text-xs font-semibold text-ink/80" htmlFor="signin-email">
                     Email address
                   </label>
                   <input
@@ -269,19 +269,19 @@ export default function Login() {
                     placeholder="e.g. teacher@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink/40 focus:border-brand"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="signin-password">
+                    <label className="block text-xs font-semibold text-ink/80" htmlFor="signin-password">
                       Password
                     </label>
                     <button
                       type="button"
                       onClick={() => switchTab('forgot')}
-                      className="text-xs font-bold text-brand hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-brand hover:underline cursor-pointer"
                     >
                       Forgot password?
                     </button>
@@ -295,7 +295,7 @@ export default function Login() {
                       placeholder="Your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-line bg-white pl-4 pr-11 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                      className="w-full rounded-lg border border-line bg-white pl-3.5 pr-11 py-2.5 text-base text-ink placeholder:text-ink/40 focus:border-brand"
                     />
                     <button
                       type="button"
@@ -311,12 +311,12 @@ export default function Login() {
               </div>
 
               {error && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold text-red-700">
+                <div className="mt-4 rounded-lg border border-red/25 bg-red/10 p-3 text-xs font-semibold text-red">
                   {error}
                 </div>
               )}
               {info && (
-                <div className="mt-4 rounded-xl border border-line bg-mist/60 p-3.5 text-xs font-bold text-brand leading-relaxed">
+                <div className="mt-4 rounded-lg border border-brand/25 bg-brand/10 p-3 text-xs font-semibold text-brand leading-relaxed">
                   {info}
                 </div>
               )}
@@ -324,7 +324,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="mt-6 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-brand py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {busy ? 'Signing in…' : 'Sign in'}
               </button>
@@ -344,7 +344,7 @@ export default function Login() {
 
               <div className="mt-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="signup-name">
+                  <label className="block text-xs font-semibold text-ink/80" htmlFor="signup-name">
                     Full name
                   </label>
                   <input
@@ -355,12 +355,12 @@ export default function Login() {
                     placeholder="e.g. Mary Adekunle"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink/40 focus:border-brand"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="signup-email">
+                  <label className="block text-xs font-semibold text-ink/80" htmlFor="signup-email">
                     Email address
                   </label>
                   <input
@@ -371,12 +371,12 @@ export default function Login() {
                     placeholder="e.g. teacher@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                    className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink/40 focus:border-brand"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="signup-password">
+                  <label className="block text-xs font-semibold text-ink/80" htmlFor="signup-password">
                     Password
                   </label>
                   <div className="relative mt-1.5">
@@ -389,7 +389,7 @@ export default function Login() {
                       placeholder="At least 6 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-line bg-white pl-4 pr-11 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                      className="w-full rounded-lg border border-line bg-white pl-3.5 pr-11 py-2.5 text-base text-ink placeholder:text-ink/40 focus:border-brand"
                     />
                     <button
                       type="button"
@@ -405,7 +405,7 @@ export default function Login() {
               </div>
 
               {error && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold text-red-700">
+                <div className="mt-4 rounded-lg border border-red/25 bg-red/10 p-3 text-xs font-semibold text-red">
                   {error}
                 </div>
               )}
@@ -413,7 +413,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="mt-6 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-brand py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {busy ? 'Creating account…' : 'Create account'}
               </button>
@@ -423,8 +423,8 @@ export default function Login() {
           {tab === 'signup_success' && (
             <div className="mt-6 sm:mt-8 space-y-5">
               <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800">
-                  <CheckCircleIcon className="h-4 w-4 text-emerald-600" /> Account Created
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-ok/30 bg-ok/10 px-3 py-1 text-xs font-bold text-ok">
+                  <CheckCircleIcon className="h-4 w-4 text-ok" /> Account Created
                 </span>
                 <h2 className="mt-3 text-2xl font-black tracking-tight text-ink sm:text-3xl">
                   Approval Required
@@ -434,9 +434,9 @@ export default function Login() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-5">
+              <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 sm:p-5">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-2xs">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-xs">
                     <MailIcon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -455,8 +455,8 @@ export default function Login() {
                     )}
 
                     {emailTriggered && (
-                      <div className="mt-2.5 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2 text-xs font-bold text-emerald-800">
-                        <CheckCircleIcon className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <div className="mt-2.5 flex items-center gap-2 rounded-lg bg-ok/10 border border-ok/25 p-2 text-xs font-semibold text-ok">
+                        <CheckCircleIcon className="h-4 w-4 text-ok shrink-0" />
                         <span>Email app opened! Tap &quot;Send&quot; in your mail client.</span>
                       </div>
                     )}
@@ -471,16 +471,16 @@ export default function Login() {
                         })
                         setEmailTriggered(true)
                       }}
-                      className="mt-3.5 flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-brand-dark active:scale-[0.99] transition-all cursor-pointer"
+                      className="mt-3.5 flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-brand-dark active:scale-[0.99] transition-all cursor-pointer"
                     >
                       <MailIcon className="h-4 w-4" />
                       {emailTriggered ? 'Open email again' : 'Email Principals to Approve'}
                     </button>
 
                     {principals.length > 0 && (
-                      <p className="mt-2 text-[11px] text-ink/50">
+                      <p className="mt-2 text-[11px] text-ink/60">
                         Sending to:{' '}
-                        <span className="font-mono text-ink/70">
+                        <span className="font-mono text-ink/75">
                           {principals.map((p) => p.email).filter(Boolean).join(', ')}
                         </span>
                       </p>
@@ -493,7 +493,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => switchTab('signin')}
-                  className="flex w-full items-center justify-center rounded-xl bg-ink py-3.5 text-sm font-bold text-white shadow-2xs hover:bg-ink/90 active:scale-[0.99] transition-all cursor-pointer"
+                  className="flex min-h-[44px] w-full items-center justify-center rounded-lg bg-ink py-3 text-sm font-bold text-white shadow-xs hover:bg-ink/90 active:scale-[0.99] transition-all cursor-pointer"
                 >
                   Proceed to Sign in →
                 </button>
@@ -513,7 +513,7 @@ export default function Login() {
               </div>
 
               <div className="mt-6">
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink/75" htmlFor="forgot-email">
+                <label className="block text-xs font-semibold text-ink/80" htmlFor="forgot-email">
                   Email address
                 </label>
                 <input
@@ -524,17 +524,17 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. teacher@example.com"
-                  className="mt-1.5 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-ink/40 focus:border-brand focus:outline-hidden"
+                  className="mt-1.5 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-ink/40 focus:border-brand"
                 />
               </div>
 
               {error && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold text-red-700">
+                <div className="mt-4 rounded-lg border border-red/25 bg-red/10 p-3 text-xs font-semibold text-red">
                   {error}
                 </div>
               )}
               {info && (
-                <div className="mt-4 rounded-xl border border-line bg-mist/60 p-3.5 text-xs font-bold text-brand leading-relaxed">
+                <div className="mt-4 rounded-lg border border-brand/25 bg-brand/10 p-3 text-xs font-semibold text-brand leading-relaxed">
                   {info}
                 </div>
               )}
@@ -542,7 +542,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-base font-extrabold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="mt-6 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-brand py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-brand-dark active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {busy ? 'Sending link…' : 'Send reset link'}
               </button>
@@ -550,7 +550,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchTab('signin')}
-                className="mt-3 w-full rounded-xl border border-line py-3 text-sm font-bold text-ink/70 transition-colors hover:bg-mist cursor-pointer"
+                className="mt-3 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-line py-2.5 text-sm font-semibold text-ink/75 transition-colors hover:bg-mist cursor-pointer"
               >
                 Back to sign in
               </button>

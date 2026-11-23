@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase, today } from './supabase'
 import {
   ArrowLeftIcon,
-  Brand,
   DownloadIcon,
   SearchIcon,
   UsersIcon,
@@ -12,7 +11,7 @@ import {
   CheckIcon,
 } from './Icons'
 import GroupBadge from './GroupBadge'
-import GroupBarChart from './GroupBarChart'
+import ClassTrendChart from './ClassTrendChart'
 
 function formatLagosDate(dateStr) {
   if (!dateStr) return ''
@@ -64,25 +63,21 @@ function downloadCSV(filename, rows) {
   URL.revokeObjectURL(url)
 }
 
-export default function AttendanceDashboard({
+export default function ReportsPage({
   onBack,
   onSelectStudent,
   onSelectEvent,
 }) {
   const [events, setEvents] = useState([])
   const [students, setStudents] = useState([])
-  const [groups, setGroups] = useState([])
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Navigation tab: 'events' | 'students' | 'groups' | 'followup'
-  const [activeTab, setActiveTab] = useState('events')
+  // Navigation tab: 'classes' | 'events' | 'students' | 'followup'
+  const [activeTab, setActiveTab] = useState('classes')
 
   // Selected event for deep breakdown modal/card
   const [selectedEventId, setSelectedEventId] = useState(null)
-
-  // Selected event for group analytics (default 'latest')
-  const [selectedGroupEventId, setSelectedGroupEventId] = useState('latest')
 
   // Filters & search
   const [studentSearch, setStudentSearch] = useState('')
@@ -94,7 +89,7 @@ export default function AttendanceDashboard({
     async function loadData() {
       setLoading(true)
 
-      const [eventsRes, studentsRes, attendanceRes, groupsRes] = await Promise.all([
+      const [eventsRes, studentsRes, attendanceRes] = await Promise.all([
         supabase
           .from('events')
           .select('id, title, event_date, status, created_at, opened_at, closed_at')
@@ -109,11 +104,6 @@ export default function AttendanceDashboard({
           .from('attendance')
           .select('id, event_id, student_id, created_at, group_id, student_groups(id, name, color), marked_by, profiles:marked_by(full_name)')
           .order('created_at', { ascending: false }),
-        supabase
-          .from('student_groups')
-          .select('*, lead_teacher:lead_teacher_id(id, full_name, email)')
-          .eq('active', true)
-          .order('name'),
       ])
 
       if (!mounted) return
@@ -121,7 +111,6 @@ export default function AttendanceDashboard({
       setEvents(eventsRes.data || [])
       setStudents(studentsRes.data || [])
       setAttendance(attendanceRes.data || [])
-      setGroups(groupsRes.data || [])
       setLoading(false)
     }
 
@@ -292,50 +281,69 @@ export default function AttendanceDashboard({
     }
   }, [selectedEventId, events, attendanceByEvent, students])
 
-  // Group Attendance Statistics Calculation
-  const targetGroupEvent = useMemo(() => {
-    if (selectedGroupEventId === 'latest') {
-      return eligibleEvents[0] || null
-    }
-    return eligibleEvents.find((e) => e.id === selectedGroupEventId) || null
-  }, [eligibleEvents, selectedGroupEventId])
+  // Class attendance trend analytics across sessions
+  const classSessions = useMemo(() => {
+    // Chronological order: oldest to newest for trend visualisation
+    const sorted = [...eligibleEvents].sort((a, b) => {
+      if (a.event_date === b.event_date) {
+        return (a.created_at || '').localeCompare(b.created_at || '')
+      }
+      return (a.event_date || '').localeCompare(b.event_date || '')
+    })
 
-  const groupStats = useMemo(() => {
-    if (!groups || groups.length === 0) return []
-
-    const presentRecordsForEvent = targetGroupEvent
-      ? attendance.filter((a) => a.event_id === targetGroupEvent.id)
-      : []
-
-    return groups.map((g) => {
-      // Total students currently in group
-      const groupStudents = students.filter((s) => s.group_id === g.id)
-      const totalStudents = groupStudents.length
-
-      // Count students present in this group for the target event
-      // Uses historical group snapshot if present, falls back to student's current group
-      const presentCount = presentRecordsForEvent.filter((a) => {
-        const histGroupId = a.group_id || a.student_groups?.id
-        if (histGroupId) return histGroupId === g.id
-        const st = students.find((s) => s.id === a.student_id)
-        return st?.group_id === g.id
-      }).length
-
-      const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0
+    return sorted.map((evt) => {
+      const presentCount = attendanceByEvent.get(evt.id)?.size || 0
+      const rate =
+        totalActiveStudents > 0
+          ? Math.round((presentCount / totalActiveStudents) * 100)
+          : 0
 
       return {
-        id: g.id,
-        name: g.name,
-        color: g.color || '#0b5d5b',
-        leadTeacher: g.lead_teacher?.full_name || null,
-        totalStudents,
+        id: evt.id,
+        title: evt.title,
+        event_date: evt.event_date,
+        status: evt.status,
+        created_at: evt.created_at,
         presentCount,
+        totalStudents: totalActiveStudents,
         rate,
       }
     })
-  }, [groups, students, attendance, targetGroupEvent])
+  }, [eligibleEvents, attendanceByEvent, totalActiveStudents])
+
+  // Top attended class session
+  const topClassSession = useMemo(() => {
+    if (classSessions.length === 0) return null
+    return [...classSessions].sort((a, b) => (b.presentCount || 0) - (a.presentCount || 0))[0]
+  }, [classSessions])
+
+  // Latest class session
+  const latestClassSession = useMemo(() => {
+    if (classSessions.length === 0) return null
+    return classSessions[classSessions.length - 1]
+  }, [classSessions])
 
   // Export functions
+  function exportClassAnalytics() {
+    const header = [
+      'Class / Session Title',
+      'Session Date',
+      'Status',
+      'Students Present',
+      'Total Active Students',
+      'Turnout Rate (%)',
+    ]
+    const rows = classSessions.map((c) => [
+      c.title,
+      c.event_date,
+      c.status,
+      c.presentCount,
+      c.totalStudents,
+      `${c.rate}%`,
+    ])
+    downloadCSV(`FFS_Class_Attendance_Analytics_${today()}.csv`, [header, ...rows])
+  }
+
   function exportEventsSummary() {
     const header = ['Event Date', 'Event Title', 'Status', 'Present Count', 'Total Active Students', 'Turnout Rate (%)']
     const rows = eligibleEvents.map((e) => {
@@ -365,25 +373,6 @@ export default function AttendanceDashboard({
       `${s.rate}%`,
     ])
     downloadCSV(`FFS_Student_Attendance_Rates_${today()}.csv`, [header, ...rows])
-  }
-
-  function exportGroupAnalytics() {
-    const eventName = targetGroupEvent?.title || 'Selected Session'
-    const eventDate = targetGroupEvent?.event_date || today()
-    const header = ['Group Name', 'Lead Teacher', 'Total Assigned Students', 'Students Present', 'Turnout Rate (%)']
-    const rows = groupStats.map((g) => [
-      g.name,
-      g.leadTeacher || 'None',
-      g.totalStudents,
-      g.presentCount,
-      `${g.rate}%`,
-    ])
-    downloadCSV(`FFS_Group_Attendance_${eventName.replace(/\s+/g, '_')}_${eventDate}.csv`, [
-      [`Event: ${eventName}`, `Date: ${eventDate}`],
-      [''],
-      header,
-      ...rows,
-    ])
   }
 
   function exportFollowUpList() {
@@ -434,31 +423,28 @@ export default function AttendanceDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-mist">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Brand />
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-mist active:scale-95 sm:px-3.5 sm:text-sm"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to home</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-        </div>
-      </header>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6">
+      {/* Top action row with back button */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-2xs hover:bg-mist transition-colors cursor-pointer active:scale-95"
+        >
+          <ArrowLeftIcon className="h-4 w-4 text-ink/60" />
+          <span>Back to Dashboard</span>
+        </button>
+      </div>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+      <div className="space-y-6">
         {/* Title & Role Info */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-black text-ink sm:text-3xl">
-              Attendance Dashboard
+              Reports & Analytics
             </h1>
             <p className="mt-1 text-sm text-ink/65 sm:text-base">
-              Principal overview: attendance per event, student rates, and follow-up alerts.
+              Principal analytical suite: events breakdown, student rates, group analytics, and follow-up reports.
             </p>
           </div>
 
@@ -478,47 +464,47 @@ export default function AttendanceDashboard({
           <div className="mt-8 space-y-8">
             {/* 4 Metric Summary Cards */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs sm:p-5">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink/50 sm:text-xs">
+              <div className="rounded-xl border border-line bg-white p-4 shadow-xs sm:p-5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-ink/70">
                   <UsersIcon className="h-4 w-4 text-brand" /> Active Students
                 </div>
-                <p className="mt-2 text-2xl font-black text-ink sm:text-3xl">
+                <p className="mt-2 text-2xl font-extrabold text-ink sm:text-3xl">
                   {totalActiveStudents}
                 </p>
-                <p className="mt-1 text-xs text-ink/60">{totalCheckIns} check-ins recorded</p>
+                <p className="mt-1 text-xs text-ink/65">{totalCheckIns} check-ins recorded</p>
               </div>
 
-              <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs sm:p-5">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink/50 sm:text-xs">
+              <div className="rounded-xl border border-line bg-white p-4 shadow-xs sm:p-5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-ink/70">
                   <CalendarIcon className="h-4 w-4 text-brand" /> Events Held
                 </div>
-                <p className="mt-2 text-2xl font-black text-ink sm:text-3xl">
+                <p className="mt-2 text-2xl font-extrabold text-ink sm:text-3xl">
                   {totalEventsCount}
                 </p>
-                <p className="mt-1 text-xs text-ink/60">Total tracked sessions</p>
+                <p className="mt-1 text-xs text-ink/65">Total tracked sessions</p>
               </div>
 
-              <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs sm:p-5">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink/50 sm:text-xs">
+              <div className="rounded-xl border border-line bg-white p-4 shadow-xs sm:p-5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-ink/70">
                   <CheckIcon className="h-4 w-4 text-ok" /> Avg. Turnout
                 </div>
-                <p className="mt-2 text-2xl font-black text-ink sm:text-3xl">
+                <p className="mt-2 text-2xl font-extrabold text-ink sm:text-3xl">
                   {avgAttendancePerEvent}{' '}
-                  <span className="text-sm font-bold text-ink/50 sm:text-base">
+                  <span className="text-sm font-semibold text-ink/55 sm:text-base">
                     ({avgRatePerEvent}%)
                   </span>
                 </p>
-                <p className="mt-1 text-xs text-ink/60">Per event session</p>
+                <p className="mt-1 text-xs text-ink/65">Per event session</p>
               </div>
 
-              <div className="rounded-2xl border border-line bg-white p-4 shadow-2xs sm:p-5">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink/50 sm:text-xs">
+              <div className="rounded-xl border border-line bg-white p-4 shadow-xs sm:p-5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-ink/70">
                   <AlertCircleIcon className="h-4 w-4 text-sun" /> Follow-up Needed
                 </div>
-                <p className="mt-2 text-2xl font-black text-sun sm:text-3xl">
+                <p className="mt-2 text-2xl font-extrabold text-amber-700 sm:text-3xl">
                   {followUpStudents.length}
                 </p>
-                <p className="mt-1 text-xs text-ink/60">Missed 2+ recent events</p>
+                <p className="mt-1 text-xs text-ink/65">Missed 2+ recent events</p>
               </div>
             </div>
 
@@ -527,10 +513,21 @@ export default function AttendanceDashboard({
               <nav className="flex space-x-2 overflow-x-auto max-w-full pb-1 scrollbar-none" aria-label="Tabs">
                 <button
                   type="button"
+                  onClick={() => setActiveTab('classes')}
+                  className={`min-h-[40px] rounded-lg px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    activeTab === 'classes'
+                      ? 'bg-brand text-white shadow-xs'
+                      : 'bg-white text-ink/70 hover:bg-mist'
+                  }`}
+                >
+                  Class analytics ({classSessions.length})
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveTab('events')}
-                  className={`rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all ${
+                  className={`min-h-[40px] rounded-lg px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'events'
-                      ? 'bg-brand text-white shadow-2xs'
+                      ? 'bg-brand text-white shadow-xs'
                       : 'bg-white text-ink/70 hover:bg-mist'
                   }`}
                 >
@@ -539,9 +536,9 @@ export default function AttendanceDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveTab('students')}
-                  className={`rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
+                  className={`min-h-[40px] rounded-lg px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'students'
-                      ? 'bg-brand text-white shadow-2xs'
+                      ? 'bg-brand text-white shadow-xs'
                       : 'bg-white text-ink/70 hover:bg-mist'
                   }`}
                 >
@@ -549,21 +546,10 @@ export default function AttendanceDashboard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('groups')}
-                  className={`rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
-                    activeTab === 'groups'
-                      ? 'bg-brand text-white shadow-2xs'
-                      : 'bg-white text-ink/70 hover:bg-mist'
-                  }`}
-                >
-                  Group analytics ({groups.length})
-                </button>
-                <button
-                  type="button"
                   onClick={() => setActiveTab('followup')}
-                  className={`relative rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer ${
+                  className={`relative min-h-[40px] rounded-lg px-4 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'followup'
-                      ? 'bg-brand text-white shadow-2xs'
+                      ? 'bg-brand text-white shadow-xs'
                       : 'bg-white text-ink/70 hover:bg-mist'
                   }`}
                 >
@@ -591,7 +577,173 @@ export default function AttendanceDashboard({
               </div>
             </div>
 
-            {/* TAB 1: EVENTS BREAKDOWN */}
+            {/* TAB 1: CLASS ANALYTICS & CURVED SPLINE TREND CHART */}
+            {activeTab === 'classes' && (
+              <div className="space-y-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-ink">
+                      Class Attendance Analytics
+                    </h2>
+                    <p className="mt-0.5 text-xs text-ink/60">
+                      Curved spline attendance trend tracking headcount across session classes.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {classSessions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={exportClassAnalytics}
+                        className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink hover:bg-mist cursor-pointer shadow-2xs"
+                      >
+                        <DownloadIcon className="h-4 w-4" /> Export class CSV
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Spline Trend Chart Component */}
+                <ClassTrendChart
+                  sessions={classSessions}
+                  onSelectSession={setSelectedEventId}
+                  totalActiveStudents={totalActiveStudents}
+                />
+
+                {/* 3 Class Key Highlights */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                  <div className="rounded-xl border border-line bg-white p-4 shadow-xs">
+                    <span className="text-xs font-bold text-ink/50 uppercase tracking-wide">
+                      Highest Attendance
+                    </span>
+                    <p className="mt-1 text-lg font-black text-ink">
+                      {topClassSession ? topClassSession.title : 'None'}
+                    </p>
+                    <p className="text-xs font-semibold text-ok mt-0.5">
+                      {topClassSession ? `${topClassSession.presentCount} students (${topClassSession.rate}%)` : '-'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-line bg-white p-4 shadow-xs">
+                    <span className="text-xs font-bold text-ink/50 uppercase tracking-wide">
+                      Latest Class Headcount
+                    </span>
+                    <p className="mt-1 text-lg font-black text-ink">
+                      {latestClassSession ? latestClassSession.title : 'None'}
+                    </p>
+                    <p className="text-xs font-semibold text-brand mt-0.5">
+                      {latestClassSession ? `${latestClassSession.presentCount} students present` : '-'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-line bg-white p-4 shadow-xs">
+                    <span className="text-xs font-bold text-ink/50 uppercase tracking-wide">
+                      Average Class Headcount
+                    </span>
+                    <p className="mt-1 text-lg font-black text-ink">
+                      {avgAttendancePerEvent} Students
+                    </p>
+                    <p className="text-xs font-semibold text-ink/60 mt-0.5">
+                      {avgRatePerEvent}% average class turnout
+                    </p>
+                  </div>
+                </div>
+
+                {/* Class Session Headcount Breakdown Table */}
+                <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-extrabold text-ink">
+                        Class Session Headcount Log
+                      </h3>
+                      <p className="text-xs text-ink/50 mt-0.5">
+                        Detailed attendance headcount per class attendance opening.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-line bg-mist/60 text-xs font-extrabold text-ink/60">
+                        <tr>
+                          <th className="px-5 py-3.5">Class / Session</th>
+                          <th className="px-4 py-3.5">Date</th>
+                          <th className="px-4 py-3.5">Status</th>
+                          <th className="px-4 py-3.5 text-center">Students Present</th>
+                          <th className="px-4 py-3.5 text-right">Turnout Rate</th>
+                          <th className="px-4 py-3.5 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {classSessions.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-8 text-center text-ink/60">
+                              No class sessions recorded in this period.
+                            </td>
+                          </tr>
+                        ) : (
+                          // Display in reverse chronological order for the table
+                          [...classSessions].reverse().map((session) => (
+                            <tr key={session.id} className="transition-colors hover:bg-mist/40">
+                              <td className="px-5 py-3.5 font-extrabold text-ink">
+                                {session.title}
+                              </td>
+                              <td className="px-4 py-3.5 text-xs font-semibold text-ink/70">
+                                {formatLagosDate(session.event_date)}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                    session.status === 'open'
+                                      ? 'bg-ok/15 text-ok'
+                                      : 'bg-mist text-ink/60'
+                                  }`}
+                                >
+                                  {session.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-black text-ink">
+                                <span className="text-base text-brand">
+                                  {session.presentCount}
+                                </span>{' '}
+                                <span className="text-xs font-bold text-ink/50">
+                                  / {session.totalStudents}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                <span
+                                  className={`inline-block min-w-[44px] rounded-md px-2 py-0.5 text-xs font-black ${
+                                    session.rate >= 75
+                                      ? 'bg-ok/15 text-ok'
+                                      : session.rate >= 50
+                                      ? 'bg-brand/10 text-brand'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {session.rate}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedEventId(session.id)}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-mist/80 px-2.5 py-1 text-xs font-bold text-ink hover:bg-line/40 transition-colors cursor-pointer"
+                                >
+                                  <span>View who came</span>
+                                  <ChevronRightIcon className="h-3 w-3 text-ink/60" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: EVENTS BREAKDOWN */}
             {activeTab === 'events' && (
               <div className="space-y-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -843,105 +995,7 @@ export default function AttendanceDashboard({
               </div>
             )}
 
-            {/* TAB 3: GROUP ANALYTICS & COLOUR-CODED BAR CHART */}
-            {activeTab === 'groups' && (
-              <div className="space-y-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-xl font-extrabold text-ink">
-                      Student Group Attendance Analytics
-                    </h2>
-                    <p className="mt-0.5 text-xs text-ink/60">
-                      Colour-coded attendance breakdown and comparison across active student groups.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Event Session Selector */}
-                    {eligibleEvents.length > 0 && (
-                      <select
-                        value={selectedGroupEventId}
-                        onChange={(e) => setSelectedGroupEventId(e.target.value)}
-                        className="rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink shadow-2xs"
-                      >
-                        <option value="latest">
-                          Latest Session: {eligibleEvents[0]?.title} ({formatLagosDate(eligibleEvents[0]?.event_date)})
-                        </option>
-                        {eligibleEvents.slice(1).map((e) => (
-                          <option key={e.id} value={e.id}>
-                            {e.title} ({formatLagosDate(e.event_date)})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={exportGroupAnalytics}
-                      disabled={groups.length === 0}
-                      className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-bold text-ink hover:bg-mist disabled:opacity-50 cursor-pointer"
-                    >
-                      <DownloadIcon className="h-4 w-4" /> Export group CSV
-                    </button>
-                  </div>
-                </div>
-
-                {/* Colour-coded Bar Chart Component */}
-                <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-7">
-                  <GroupBarChart
-                    groupStats={groupStats}
-                    eventTitle={
-                      targetGroupEvent
-                        ? `${targetGroupEvent.title} (${formatLagosDate(targetGroupEvent.event_date)})`
-                        : 'Selected Session'
-                    }
-                  />
-                </div>
-
-                {/* Group Roster Summary Table */}
-                {groups.length > 0 && (
-                  <div className="rounded-2xl border border-line bg-white p-5 shadow-2xs sm:p-6">
-                    <h3 className="text-base font-extrabold text-ink">Group Roster Summary</h3>
-                    <div className="mt-4 overflow-x-auto">
-                      <table className="w-full text-left text-sm">
-                        <thead className="border-b border-line bg-mist/60 text-xs font-extrabold text-ink/60">
-                          <tr>
-                            <th className="px-5 py-3.5">Group</th>
-                            <th className="px-4 py-3.5">Lead Teacher</th>
-                            <th className="px-4 py-3.5 text-center">Assigned Students</th>
-                            <th className="px-4 py-3.5 text-center">Present in Session</th>
-                            <th className="px-4 py-3.5 text-right">Turnout Rate</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-line">
-                          {groupStats.map((g) => (
-                            <tr key={g.id} className="transition-colors hover:bg-mist/40">
-                              <td className="px-5 py-3.5">
-                                <GroupBadge group={g} size="sm" />
-                              </td>
-                              <td className="px-4 py-3.5 text-xs font-semibold text-ink">
-                                {g.leadTeacher || <span className="italic text-ink/40">Not assigned</span>}
-                              </td>
-                              <td className="px-4 py-3.5 text-center font-bold text-ink">
-                                {g.totalStudents}
-                              </td>
-                              <td className="px-4 py-3.5 text-center font-black text-ok">
-                                {g.presentCount}
-                              </td>
-                              <td className="px-4 py-3.5 text-right font-black" style={{ color: g.color }}>
-                                {g.rate}%
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 3: NEEDS FOLLOW-UP */}
+            {/* TAB 4: NEEDS FOLLOW-UP */}
             {activeTab === 'followup' && (
               <div className="space-y-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1038,7 +1092,7 @@ export default function AttendanceDashboard({
             )}
           </div>
         )}
-      </main>
+      </div>
 
       {/* EVENT DETAIL BREAKDOWN MODAL */}
       {selectedEventData && (
