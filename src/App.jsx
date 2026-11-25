@@ -268,7 +268,7 @@ export default function App() {
         />
       )}
 
-      {screen === 'manage-groups' && profile.role === 'principal' && (
+      {screen === 'manage-groups' && (
         <ManageGroups
           profile={profile}
           onBack={() => handleNavigate('home', 'overview')}

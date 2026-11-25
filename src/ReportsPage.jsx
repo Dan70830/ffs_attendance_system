@@ -9,9 +9,11 @@ import {
   AlertCircleIcon,
   ChevronRightIcon,
   CheckIcon,
+  WhatsAppIcon,
 } from './Icons'
 import GroupBadge from './GroupBadge'
 import ClassTrendChart from './ClassTrendChart'
+import { getWhatsAppUrl } from './whatsapp'
 
 function formatLagosDate(dateStr) {
   if (!dateStr) return ''
@@ -97,7 +99,7 @@ export default function ReportsPage({
           .order('created_at', { ascending: false }),
         supabase
           .from('students')
-          .select('id, full_name, matric_no, detail, active, created_at, group_id, student_groups(id, name, color)')
+          .select('id, full_name, matric_no, phone, detail, active, created_at, group_id, student_groups(id, name, color)')
           .eq('active', true)
           .order('full_name'),
         supabase
@@ -611,12 +613,12 @@ export default function ReportsPage({
                 />
 
                 {/* 3 Class Key Highlights */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                  <div className="rounded-xl border border-line bg-white p-4 shadow-xs">
-                    <span className="text-xs font-bold text-ink/50 uppercase tracking-wide">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-line bg-white p-3.5 shadow-2xs">
+                    <span className="text-[11px] font-bold text-ink/50 uppercase tracking-wide">
                       Highest Attendance
                     </span>
-                    <p className="mt-1 text-lg font-black text-ink">
+                    <p className="mt-1 text-base font-black text-ink truncate">
                       {topClassSession ? topClassSession.title : 'None'}
                     </p>
                     <p className="text-xs font-semibold text-ok mt-0.5">
@@ -624,11 +626,11 @@ export default function ReportsPage({
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-line bg-white p-4 shadow-xs">
-                    <span className="text-xs font-bold text-ink/50 uppercase tracking-wide">
+                  <div className="rounded-xl border border-line bg-white p-3.5 shadow-2xs">
+                    <span className="text-[11px] font-bold text-ink/50 uppercase tracking-wide">
                       Latest Class Headcount
                     </span>
-                    <p className="mt-1 text-lg font-black text-ink">
+                    <p className="mt-1 text-base font-black text-ink truncate">
                       {latestClassSession ? latestClassSession.title : 'None'}
                     </p>
                     <p className="text-xs font-semibold text-brand mt-0.5">
@@ -636,7 +638,7 @@ export default function ReportsPage({
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-line bg-white p-4 shadow-xs">
+                  <div className="rounded-xl border border-line bg-white p-3.5 shadow-2xs">
                     <span className="text-xs font-bold text-ink/50 uppercase tracking-wide">
                       Average Class Headcount
                     </span>
@@ -1076,13 +1078,26 @@ export default function ReportsPage({
                             )}
                           </p>
 
-                          <button
-                            type="button"
-                            onClick={() => onSelectStudent && onSelectStudent(student.id)}
-                            className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-line bg-mist/60 py-2 text-xs font-bold text-ink hover:bg-mist cursor-pointer"
-                          >
-                            View student history <ChevronRightIcon className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {getWhatsAppUrl(student.phone) && (
+                              <a
+                                href={getWhatsAppUrl(student.phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex flex-1 min-w-[140px] items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 py-2 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                              >
+                                <WhatsAppIcon className="h-3.5 w-3.5" />
+                                <span>WhatsApp DM</span>
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => onSelectStudent && onSelectStudent(student.id)}
+                              className="flex flex-1 min-w-[140px] items-center justify-center gap-1 rounded-lg border border-line bg-mist/60 py-2 px-3 text-xs font-bold text-ink hover:bg-mist cursor-pointer"
+                            >
+                              View student history <ChevronRightIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

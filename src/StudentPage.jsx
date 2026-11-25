@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { ArrowLeftIcon, CheckCircleIcon, TrashIcon } from './Icons'
+import { ArrowLeftIcon, CheckCircleIcon, TrashIcon, WhatsAppIcon } from './Icons'
 import GroupBadge from './GroupBadge'
+import { getWhatsAppUrl } from './whatsapp'
 
 function formatDate(dateStr, timestamp) {
   const d = dateStr ? new Date(`${dateStr}T12:00:00`) : new Date(timestamp)
@@ -28,10 +29,13 @@ export default function StudentPage({ studentId, onBack, profile }) {
   const [student, setStudent] = useState(null)
   const [name, setName] = useState('')
   const [matricNo, setMatricNo] = useState('')
+  const [phone, setPhone] = useState('')
   const [detail, setDetail] = useState('')
   const [groupId, setGroupId] = useState('')
   const [groups, setGroups] = useState([])
   const [history, setHistory] = useState([])
+  const [allEvents, setAllEvents] = useState([])
+  const [historyFilter, setHistoryFilter] = useState('all') // 'all' | 'present' | 'missed'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -42,13 +46,18 @@ export default function StudentPage({ studentId, onBack, profile }) {
   async function handleDeleteStudent() {
     setDeleting(true)
     try {
-      const { error: delErr } = await supabase
+      const { data, error: delErr } = await supabase
         .from('students')
         .delete()
         .eq('id', studentId)
+        .select('id')
 
       if (delErr) {
         alert('Could not delete student: ' + delErr.message)
+      } else if (!data || data.length === 0) {
+        alert(
+          'Student was not deleted in the database (permission blocked). Please ensure the Principal delete policy in supabase/migrations/05_production_security_hardening.sql has been applied in your Supabase SQL Editor.'
+        )
       } else {
         setShowDeleteModal(false)
         onBack()
@@ -90,20 +99,29 @@ export default function StudentPage({ studentId, onBack, profile }) {
         setStudent(sData)
         setName(sData.full_name || '')
         setMatricNo(sData.matric_no || '')
+        setPhone(sData.phone || '')
         setDetail(sData.detail || '')
         setGroupId(sData.group_id || '')
       }
 
-      // Fetch attendance history
-      const { data: aData } = await supabase
-        .from('attendance')
-        .select('id, created_at, attendance_date, event_id, events(title, event_date)')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false })
+      // Fetch attendance history and all sessions so we can show Present vs Missed
+      const [{ data: aData }, { data: eData }] = await Promise.all([
+        supabase
+          .from('attendance')
+          .select('id, created_at, attendance_date, event_id, events(title, event_date)')
+          .eq('student_id', studentId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('events')
+          .select('id, title, event_date, status, created_at')
+          .order('event_date', { ascending: false })
+          .order('created_at', { ascending: false }),
+      ])
 
       if (!mounted) return
 
       setHistory(aData || [])
+      setAllEvents(eData || [])
       setLoading(false)
     }
 
@@ -123,6 +141,7 @@ export default function StudentPage({ studentId, onBack, profile }) {
 
     const cleanName = name.trim()
     const cleanMatric = matricNo.trim() || null
+    const cleanPhone = phone.trim() || null
     const cleanDetail = detail.trim() || null
 
     if (!cleanName) {
@@ -152,6 +171,7 @@ export default function StudentPage({ studentId, onBack, profile }) {
       .update({
         full_name: cleanName,
         matric_no: cleanMatric,
+        phone: cleanPhone,
         detail: cleanDetail,
         group_id: groupId || null,
       })
@@ -239,9 +259,22 @@ export default function StudentPage({ studentId, onBack, profile }) {
                 </p>
               </div>
 
-              <span className="inline-flex self-start rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand sm:self-auto">
-                {history.length} event{history.length === 1 ? '' : 's'} attended
-              </span>
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                {getWhatsAppUrl(student.phone) && (
+                  <a
+                    href={getWhatsAppUrl(student.phone)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                  >
+                    <WhatsAppIcon className="h-3.5 w-3.5" />
+                    <span>WhatsApp DM ({student.phone})</span>
+                  </a>
+                )}
+                <span className="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+                  {history.length} event{history.length === 1 ? '' : 's'} attended
+                </span>
+              </div>
             </div>
 
             {/* Edit details card */}
@@ -279,6 +312,20 @@ export default function StudentPage({ studentId, onBack, profile }) {
                   <p className="mt-1 text-xs text-ink/50">
                     Required for student identification, but can be added or updated anytime.
                   </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink/75" htmlFor="edit-phone">
+                    Phone / WhatsApp number
+                  </label>
+                  <input
+                    id="edit-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 08103569660"
+                    className="mt-1.5 w-full rounded-lg border border-line px-3.5 py-2.5 text-sm font-medium text-ink focus:border-brand"
+                  />
                 </div>
 
                 <div>
@@ -331,54 +378,134 @@ export default function StudentPage({ studentId, onBack, profile }) {
               </form>
             </section>
 
-            {/* Attendance history card */}
-            <section className="rounded-xl border border-line bg-white p-5 shadow-2xs sm:p-7">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold sm:text-xl">Attendance history</h2>
-                  <p className="mt-0.5 text-xs text-ink/60">
-                    All events this student was marked present for, newest first.
-                  </p>
-                </div>
-                <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-ink">
-                  Total: {history.length}
-                </span>
-              </div>
+            {/* Attendance breakdown card (Present & Missed sessions) */}
+            {(() => {
+              const attendedByEventId = new Map(history.map((r) => [r.event_id, r]))
+              const sessionBreakdown = allEvents
+                .filter((ev) => ev.status !== 'scheduled' || attendedByEventId.has(ev.id))
+                .map((ev) => {
+                  const rec = attendedByEventId.get(ev.id)
+                  return {
+                    id: ev.id,
+                    title: ev.title || 'Class attendance',
+                    event_date: ev.event_date,
+                    status: ev.status,
+                    attended: Boolean(rec),
+                    checkInAt: rec?.created_at || null,
+                  }
+                })
 
-              {history.length === 0 ? (
-                <p className="mt-4 rounded-lg border border-dashed border-line bg-mist/50 p-6 text-sm text-ink/60">
-                  No attendance records found for {student.full_name}.
-                </p>
-              ) : (
-                <ul className="mt-4 divide-y divide-line border-t border-line">
-                  {history.map((record) => {
-                    const title = record.events?.title || 'Class attendance'
-                    const dateDisplay = formatDate(
-                      record.events?.event_date || record.attendance_date,
-                      record.created_at
-                    )
-                    const timeDisplay = formatTime(record.created_at)
+              const totalCount = sessionBreakdown.length
+              const presentCount = sessionBreakdown.filter((s) => s.attended).length
+              const missedCount = totalCount - presentCount
+              const scorePct = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0
+              const filteredList = sessionBreakdown.filter((s) => {
+                if (historyFilter === 'present') return s.attended
+                if (historyFilter === 'missed') return !s.attended
+                return true
+              })
 
-                    return (
-                      <li
-                        key={record.id}
-                        className="flex items-center justify-between py-3.5"
-                      >
-                        <div>
-                          <p className="font-bold text-ink">{title}</p>
-                          <p className="text-xs text-ink/60">{dateDisplay}</p>
-                        </div>
-                        {timeDisplay && (
-                          <span className="text-xs font-semibold text-ink/50">
-                            {timeDisplay}
-                          </span>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </section>
+              return (
+                <section className="rounded-xl border border-line bg-white p-5 shadow-2xs sm:p-7 space-y-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold sm:text-xl text-ink">Class Attendance Breakdown</h2>
+                      <p className="mt-0.5 text-xs text-ink/60">
+                        Exact classes attended and missed across all held sessions.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700">
+                        {presentCount}/{totalCount} attended ({scorePct}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Visual Progress Bar */}
+                  {totalCount > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-mist">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            scorePct >= 75
+                              ? 'bg-emerald-600'
+                              : scorePct >= 50
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          }`}
+                          style={{ width: `${scorePct}%` }}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {[
+                          { id: 'all', label: `All (${totalCount})` },
+                          { id: 'present', label: `Present (${presentCount})` },
+                          { id: 'missed', label: `Missed (${missedCount})` },
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setHistoryFilter(tab.id)}
+                            className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors cursor-pointer ${
+                              historyFilter === tab.id
+                                ? 'bg-ink text-white'
+                                : 'bg-mist/70 text-ink/70 hover:bg-mist'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {filteredList.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-line bg-mist/50 p-6 text-sm text-ink/60">
+                      {totalCount === 0
+                        ? `No attendance sessions have been held yet.`
+                        : `No ${historyFilter} sessions found for ${student.full_name}.`}
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-line border-t border-line">
+                      {filteredList.map((item) => {
+                        const dateDisplay = formatDate(item.event_date, item.checkInAt)
+                        const timeDisplay = formatTime(item.checkInAt)
+
+                        return (
+                          <li
+                            key={item.id}
+                            className="flex items-center justify-between gap-3 py-3.5"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-bold text-ink truncate">{item.title}</p>
+                              <p className="text-xs text-ink/60">{dateDisplay}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {item.attended ? (
+                                <>
+                                  {timeDisplay && (
+                                    <span className="hidden sm:inline text-xs font-semibold text-ink/50">
+                                      {timeDisplay}
+                                    </span>
+                                  )}
+                                  <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                                    Present
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-xs font-bold text-rose-700">
+                                  Missed
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </section>
+              )
+            })()}
           </div>
         )}
       </div>

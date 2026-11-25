@@ -16,8 +16,10 @@ import {
   BellIcon,
   BookOpenIcon,
   TrashIcon,
+  WhatsAppIcon,
 } from './Icons'
 import GroupBadge from './GroupBadge'
+import { getWhatsAppUrl } from './whatsapp'
 
 function formatLagosDate(dateStr) {
   if (!dateStr) return ''
@@ -96,13 +98,18 @@ export default function Home({
     if (!targetStudent) return
     setDeletingStudent(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('students')
         .delete()
         .eq('id', targetStudent.id)
+        .select('id')
 
       if (error) {
         alert('Could not delete student: ' + error.message)
+      } else if (!data || data.length === 0) {
+        alert(
+          'Student was not deleted in the database (permission blocked). Please ensure the Principal delete policy in supabase/migrations/05_production_security_hardening.sql has been applied in your Supabase SQL Editor.'
+        )
       } else {
         setStudents((prev) => prev.filter((s) => s.id !== targetStudent.id))
         setDeleteStudentTarget(null)
@@ -136,6 +143,7 @@ export default function Home({
   // Add student form state
   const [name, setName] = useState('')
   const [matricNo, setMatricNo] = useState('')
+  const [phone, setPhone] = useState('')
   const [detail, setDetail] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [addMsg, setAddMsg] = useState('')
@@ -160,7 +168,7 @@ export default function Home({
   async function loadStudents() {
     const { data } = await supabase
       .from('students')
-      .select('id, full_name, matric_no, detail, active, created_at, group_id, student_groups(id, name, color)')
+      .select('id, full_name, matric_no, phone, detail, active, created_at, group_id, student_groups(id, name, color)')
       .eq('active', true)
       .order('full_name')
 
@@ -258,6 +266,7 @@ export default function Home({
 
     const cleanName = name.trim()
     const cleanMatric = matricNo.trim() || null
+    const cleanPhone = phone.trim() || null
     const cleanDetail = detail.trim() || null
 
     if (!cleanName) {
@@ -283,6 +292,7 @@ export default function Home({
     const { error } = await supabase.from('students').insert({
       full_name: cleanName,
       matric_no: cleanMatric,
+      phone: cleanPhone,
       detail: cleanDetail,
       group_id: selectedGroupId || null,
       active: true,
@@ -300,6 +310,7 @@ export default function Home({
       setAddMsg(`${cleanName} was added successfully.`)
       setName('')
       setMatricNo('')
+      setPhone('')
       setDetail('')
       setSelectedGroupId('')
       loadStudents()
@@ -324,6 +335,23 @@ export default function Home({
   const myAssignedStudents = students.filter(
     (s) => s.group_id && myAssignedGroupIds.has(s.group_id)
   )
+
+  const eligibleEvents = events.filter(
+    (e) => e.status !== 'scheduled' || (e.attendance && e.attendance.length > 0)
+  )
+
+  function getStudentScore(studentId) {
+    const total = eligibleEvents.length
+    if (total === 0) return { attended: 0, total: 0, pct: 0 }
+    const attended = eligibleEvents.filter((e) =>
+      e.attendance?.some((a) => a.student_id === studentId)
+    ).length
+    return {
+      attended,
+      total,
+      pct: Math.round((attended / total) * 100),
+    }
+  }
 
   const filteredMyAssignedStudents = myAssignedStudents.filter((s) => {
     if (!myStudentsSearch.trim()) return true
@@ -428,9 +456,10 @@ export default function Home({
     if (!searchTerm) return true
     const nameMatch = s.full_name?.toLowerCase().includes(searchTerm)
     const matricMatch = s.matric_no?.toLowerCase().includes(searchTerm)
+    const phoneMatch = s.phone?.toLowerCase().includes(searchTerm)
     const detailMatch = s.detail?.toLowerCase().includes(searchTerm)
     const groupNameMatch = s.student_groups?.name?.toLowerCase().includes(searchTerm)
-    return nameMatch || matricMatch || detailMatch || groupNameMatch
+    return nameMatch || matricMatch || phoneMatch || detailMatch || groupNameMatch
   })
 
   return (
@@ -1291,7 +1320,7 @@ export default function Home({
                         </button>
                       </div>
                     ) : (
-                      <div className="mt-4 grid grid-cols-3 gap-3">
+                      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {/* Teacher Action 1: Add Student */}
                         <button
                           type="button"
@@ -1335,6 +1364,20 @@ export default function Home({
                           </span>
                           <span className="text-[11px] font-bold text-ink leading-tight">
                             Assigned Group ({myAssignedStudents.length})
+                          </span>
+                        </button>
+
+                        {/* Teacher Action 4: Create / Manage Groups */}
+                        <button
+                          type="button"
+                          onClick={onManageGroups}
+                          className="flex flex-col items-center justify-center gap-2 rounded-xl border border-line bg-mist/30 p-3 text-center transition-all hover:bg-mist hover:border-brand/30 cursor-pointer group active:scale-95"
+                        >
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+                            <PlusIcon className="h-5 w-5" />
+                          </span>
+                          <span className="text-[11px] font-bold text-ink leading-tight">
+                            Student Groups
                           </span>
                         </button>
                       </div>
@@ -1489,9 +1532,9 @@ export default function Home({
                             <thead className="border-b border-line bg-mist/60 text-xs font-extrabold text-ink/60">
                               <tr>
                                 <th className="px-5 py-3.5">Student Name</th>
+                                <th className="px-4 py-3.5">Attendance Score</th>
                                 <th className="px-4 py-3.5">Matric Number</th>
                                 <th className="px-4 py-3.5">Class / Detail</th>
-                                <th className="px-4 py-3.5">Group</th>
                                 <th className="px-4 py-3.5 text-right">Action</th>
                               </tr>
                             </thead>
@@ -1503,7 +1546,22 @@ export default function Home({
                                   </td>
                                 </tr>
                               ) : (
-                                filteredMyAssignedStudents.map((s) => (
+                                filteredMyAssignedStudents.map((s) => {
+                                  const score = getStudentScore(s.id)
+                                  const barColor =
+                                    score.pct >= 75
+                                      ? 'bg-emerald-600'
+                                      : score.pct >= 50
+                                      ? 'bg-amber-500'
+                                      : 'bg-rose-500'
+                                  const textColor =
+                                    score.pct >= 75
+                                      ? 'text-emerald-700'
+                                      : score.pct >= 50
+                                      ? 'text-amber-700'
+                                      : 'text-rose-700'
+
+                                  return (
                                   <tr
                                     key={s.id}
                                     onClick={() => onSelectStudent && onSelectStudent(s)}
@@ -1517,30 +1575,63 @@ export default function Home({
                                         <span>{s.full_name}</span>
                                       </div>
                                     </td>
+                                    <td className="px-4 py-3.5">
+                                      {score.total === 0 ? (
+                                        <span className="text-xs italic text-ink/40">No sessions yet</span>
+                                      ) : (
+                                        <div className="w-36 space-y-1">
+                                          <div className="flex items-center justify-between text-xs font-bold">
+                                            <span className="text-ink">
+                                              {score.attended}/{score.total} {score.total === 1 ? 'class' : 'classes'}
+                                            </span>
+                                            <span className={textColor}>{score.pct}%</span>
+                                          </div>
+                                          <div className="h-2 w-full overflow-hidden rounded-full bg-mist">
+                                            <div
+                                              className={`h-full rounded-full transition-all ${barColor}`}
+                                              style={{ width: `${score.pct}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </td>
                                     <td className="px-4 py-3.5 text-xs font-semibold text-brand">
                                       {s.matric_no || <span className="italic text-ink/40">No matric</span>}
                                     </td>
                                     <td className="px-4 py-3.5 text-xs text-ink/65">
                                       {s.detail || '-'}
                                     </td>
-                                    <td className="px-4 py-3.5">
-                                      <GroupBadge group={myLeadGroup} size="xs" />
-                                    </td>
                                     <td className="px-4 py-3.5 text-right">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          if (onSelectStudent) onSelectStudent(s)
-                                        }}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-mist/80 px-3 py-1.5 text-xs font-bold text-ink hover:bg-line/40 transition-colors cursor-pointer"
-                                      >
-                                        <span>View attendance history</span>
-                                        <ChevronRightIcon className="h-3.5 w-3.5 text-ink/60" />
-                                      </button>
+                                      <div className="inline-flex items-center justify-end gap-2">
+                                        {getWhatsAppUrl(s.phone) && (
+                                          <a
+                                            href={getWhatsAppUrl(s.phone)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            title={`Message ${s.full_name} on WhatsApp`}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                          >
+                                            <WhatsAppIcon className="h-3.5 w-3.5" />
+                                            <span>WhatsApp</span>
+                                          </a>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (onSelectStudent) onSelectStudent(s)
+                                          }}
+                                          className="inline-flex items-center gap-1 rounded-lg bg-mist/80 px-3 py-1.5 text-xs font-bold text-ink hover:bg-line/40 transition-colors cursor-pointer"
+                                        >
+                                          <span>View missed</span>
+                                          <ChevronRightIcon className="h-3.5 w-3.5 text-ink/60" />
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
-                                ))
+                                  )
+                                })
                               )}
                             </tbody>
                           </table>
@@ -1740,6 +1831,20 @@ export default function Home({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {getWhatsAppUrl(s.phone) && (
+                            <a
+                              href={getWhatsAppUrl(s.phone)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title={`WhatsApp DM: ${s.phone}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors shrink-0"
+                            >
+                              <WhatsAppIcon className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">{s.phone}</span>
+                              <span className="sm:hidden">WhatsApp</span>
+                            </a>
+                          )}
                           {isPrincipal && (
                             <button
                               type="button"
@@ -1909,6 +2014,20 @@ export default function Home({
                   value={matricNo}
                   onChange={(e) => setMatricNo(e.target.value)}
                   placeholder="e.g. FFS-042"
+                  className="mt-1 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm font-medium focus:border-brand"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink/80" htmlFor="add-student-phone">
+                  Phone / WhatsApp number <span className="font-normal text-ink/50">(optional)</span>
+                </label>
+                <input
+                  id="add-student-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 08103569660"
                   className="mt-1 w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm font-medium focus:border-brand"
                 />
               </div>

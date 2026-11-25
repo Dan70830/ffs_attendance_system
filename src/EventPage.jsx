@@ -33,6 +33,8 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [infoMsg, setInfoMsg] = useState('')
 
+  const isPrincipal = profile?.role === 'principal'
+
   async function handleDeleteEvent() {
     if (
       !window.confirm(
@@ -42,9 +44,18 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
       return
     }
     setActionBusy(true)
-    const { error } = await supabase.from('events').delete().eq('id', eventId)
+    const { data, error } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', eventId)
+      .select('id')
     if (error) {
       setErrorMsg('Could not delete session: ' + error.message)
+      setActionBusy(false)
+    } else if (!data || data.length === 0) {
+      setErrorMsg(
+        'Session was not deleted in the database (permission blocked). Please ensure supabase/migrations/05_production_security_hardening.sql has been applied.'
+      )
       setActionBusy(false)
     } else {
       onBack()
@@ -123,6 +134,11 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
   }
 
   async function handleOpenRoom() {
+    if (event?.status === 'closed' && !isPrincipal) {
+      showError('Only the Principal can reopen a closed attendance room.')
+      return
+    }
+
     setErrorMsg('')
     setActionBusy(true)
 
@@ -150,10 +166,10 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
     setActionBusy(false)
 
     if (error) {
-      if (error.code === '23505' || error.message?.toLowerCase().includes('open')) {
+      if (error.code === '23505' || error.message?.toLowerCase().includes('already open')) {
         showError('Another attendance room is already open. Close it first.')
       } else {
-        showError('Could not open the attendance room. Please try again.')
+        showError(error.message || 'Could not open the attendance room. Please try again.')
       }
     } else {
       showInfo('Attendance room is now open.')
@@ -162,6 +178,11 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
   }
 
   async function handleCloseRoom() {
+    if (!isPrincipal) {
+      showError('Only the Principal can close an attendance room.')
+      return
+    }
+
     setErrorMsg('')
     setActionBusy(true)
 
@@ -176,7 +197,7 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
     setActionBusy(false)
 
     if (error) {
-      showError('Could not close the attendance room. Please try again.')
+      showError(error.message || 'Could not close the attendance room. Please try again.')
     } else {
       showInfo('Attendance room has been closed.')
       loadEventData()
@@ -274,15 +295,22 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
                       <DoorOpenIcon className="h-5 w-5" /> Open check-in screen
                       <ArrowRightIcon className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={handleCloseRoom}
-                      disabled={actionBusy}
-                      className="min-h-[48px] rounded-lg border border-line bg-white px-5 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-mist active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                    >
-                      {actionBusy ? 'Closing…' : 'Close room'}
-                    </button>
 
-                    {profile?.role === 'principal' && (
+                    {isPrincipal ? (
+                      <button
+                        onClick={handleCloseRoom}
+                        disabled={actionBusy}
+                        className="min-h-[48px] rounded-lg border border-line bg-white px-5 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-mist active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                      >
+                        {actionBusy ? 'Closing…' : 'Close room'}
+                      </button>
+                    ) : (
+                      <span className="inline-flex min-h-[48px] items-center justify-center rounded-lg border border-line bg-mist/40 px-4 py-3 text-xs font-semibold text-ink/60">
+                        Only the Principal can close this room
+                      </span>
+                    )}
+
+                    {isPrincipal && (
                       <button
                         type="button"
                         onClick={handleDeleteEvent}
@@ -296,20 +324,26 @@ export default function EventPage({ eventId, onBack, onOpenKiosk, profile }) {
                   </>
                 ) : (
                   <>
-                    <button
-                      onClick={handleOpenRoom}
-                      disabled={actionBusy}
-                      className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                    >
-                      <DoorOpenIcon className="h-5 w-5" />
-                      {actionBusy
-                        ? 'Opening…'
-                        : event.status === 'closed'
-                        ? 'Reopen attendance room'
-                        : 'Open attendance room'}
-                    </button>
+                    {event.status === 'closed' && !isPrincipal ? (
+                      <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-lg border border-line bg-mist/40 px-5 py-3 text-xs sm:text-sm font-semibold text-ink/65">
+                        This room is closed. Only the Principal can reopen it.
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleOpenRoom}
+                        disabled={actionBusy}
+                        className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                      >
+                        <DoorOpenIcon className="h-5 w-5" />
+                        {actionBusy
+                          ? 'Opening…'
+                          : event.status === 'closed'
+                          ? 'Reopen attendance room'
+                          : 'Open attendance room'}
+                      </button>
+                    )}
 
-                    {profile?.role === 'principal' && (
+                    {isPrincipal && (
                       <button
                         type="button"
                         onClick={handleDeleteEvent}

@@ -112,15 +112,15 @@ export default function ClassTrendChart({
     return getIntegerTicks(maxHeadcount)
   }, [maxHeadcount])
 
-  // SVG coordinate dimensions
-  const slotWidth = 86
-  const marginLeft = 56
-  const marginRight = 44
-  const marginTop = 36
-  const marginBottom = 64
-  const plotHeight = 220
+  // SVG coordinate dimensions (proportioned for crisp desktop & mobile rendering)
+  const slotWidth = 96
+  const marginLeft = 48
+  const marginRight = 40
+  const marginTop = 58
+  const marginBottom = 48
+  const plotHeight = 164
   const chartHeight = marginTop + plotHeight + marginBottom
-  const plotWidth = Math.max(chartSessions.length * slotWidth, 420)
+  const plotWidth = Math.max(chartSessions.length * slotWidth, 680)
   const chartWidth = marginLeft + plotWidth + marginRight
 
   // Map each session to an (x, y) coordinate
@@ -179,20 +179,20 @@ export default function ClassTrendChart({
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-white p-5 shadow-xs sm:p-7 space-y-6">
+    <div className="rounded-2xl border border-line bg-white p-4 shadow-xs sm:p-5 space-y-4">
       {/* Top Header Row matching Reference Design */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-black text-ink tracking-tight sm:text-xl">
+            <h3 className="text-base font-black text-ink tracking-tight sm:text-lg">
               Class Attendance Trend
             </h3>
             <span className="inline-flex items-center rounded-full bg-mist px-2.5 py-0.5 text-[11px] font-bold text-ink/70">
               {chartSessions.length} {chartSessions.length === 1 ? 'Session' : 'Sessions'}
             </span>
           </div>
-          <p className="text-xs text-ink/60 mt-0.5">
-            Vertical: Number of students present · Horizontal: Class / session
+          <p className="text-[11px] text-ink/60 mt-0.5">
+            Vertical: Students present · Horizontal: Class / session
           </p>
         </div>
 
@@ -243,14 +243,18 @@ export default function ClassTrendChart({
       </div>
 
       {/* Interactive Chart Container */}
-      <div className="relative w-full overflow-x-auto scrollbar-thin pb-2">
+      <div className="relative w-full overflow-x-auto scrollbar-thin pb-1">
         <div
           className="relative mx-auto select-none"
-          style={{ width: chartWidth, minWidth: '100%', maxWidth: '100%' }}
+          style={{
+            width: chartWidth,
+            minWidth: '540px',
+            maxWidth: '100%',
+          }}
         >
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            className="w-full overflow-visible"
+            className="w-full max-h-[290px] overflow-visible"
             style={{ height: 'auto', display: 'block' }}
           >
             <defs>
@@ -448,21 +452,27 @@ export default function ClassTrendChart({
             <div
               className="pointer-events-none absolute z-30 transition-all duration-150 ease-out"
               style={{
-                left: `${(activePoint.x / chartWidth) * 100}%`,
-                top: `${((activePoint.y - 12) / chartHeight) * 100}%`,
-                transform: 'translate(-50%, -100%)',
+                left: `${Math.min(Math.max((activePoint.x / chartWidth) * 100, 14), 86)}%`,
+                top:
+                  activePoint.y < marginTop + 62
+                    ? `${((activePoint.y + 14) / chartHeight) * 100}%`
+                    : `${((activePoint.y - 12) / chartHeight) * 100}%`,
+                transform:
+                  activePoint.y < marginTop + 62
+                    ? 'translate(-50%, 0%)'
+                    : 'translate(-50%, -100%)',
               }}
             >
-              <div className="relative rounded-xl bg-ink/95 backdrop-blur-xs text-white shadow-xl px-3.5 py-2 text-center border border-white/10 min-w-[124px]">
+              <div className="relative rounded-xl bg-ink/95 backdrop-blur-xs text-white shadow-lg px-3 py-1.5 text-center border border-white/10 min-w-[116px]">
                 {/* Title */}
-                <p className="text-[11px] font-medium text-white/70 truncate max-w-[150px]">
+                <p className="text-[10px] font-medium text-white/70 truncate max-w-[140px]">
                   {activePoint.session.title || 'Class Session'}
                 </p>
 
                 {/* Headcount Number */}
-                <p className="text-lg font-black text-white tracking-tight leading-none mt-0.5">
+                <p className="text-base font-black text-white tracking-tight leading-none mt-0.5">
                   {activePoint.session.presentCount || 0}
-                  <span className="text-[11px] font-bold text-white/75 ml-1">
+                  <span className="text-[10px] font-bold text-white/75 ml-1">
                     {activePoint.session.presentCount === 1 ? 'Student' : 'Students'}
                   </span>
                 </p>
@@ -478,8 +488,12 @@ export default function ClassTrendChart({
                   </span>
                 </div>
 
-                {/* Bottom subtle triangle beak */}
-                <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 bg-ink/95 rotate-45 border-r border-b border-white/10" />
+                {/* Subtle beak pointing toward the point */}
+                {activePoint.y < marginTop + 62 ? (
+                  <div className="absolute left-1/2 -top-1 -translate-x-1/2 w-2 h-2 bg-ink/95 rotate-45 border-l border-t border-white/10" />
+                ) : (
+                  <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 bg-ink/95 rotate-45 border-r border-b border-white/10" />
+                )}
               </div>
             </div>
           )}

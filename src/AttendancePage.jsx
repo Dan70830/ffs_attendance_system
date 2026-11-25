@@ -56,9 +56,18 @@ export default function AttendancePage({
     if (!evt) return
     setDeletingId(evt.id)
     try {
-      const { error } = await supabase.from('events').delete().eq('id', evt.id)
+      const { data, error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', evt.id)
+        .select('id')
+
       if (error) {
         alert('Could not delete session: ' + error.message)
+      } else if (!data || data.length === 0) {
+        alert(
+          'Session was not deleted in the database (permission blocked). Please ensure the Principal delete policy in supabase/migrations/05_production_security_hardening.sql has been applied in your Supabase SQL Editor.'
+        )
       } else {
         setEvents((prev) => prev.filter((e) => e.id !== evt.id))
         setDeleteConfirmEvent(null)
@@ -73,14 +82,20 @@ export default function AttendancePage({
   async function handleClearAllSessions() {
     setClearingAll(true)
     try {
+      const hadEvents = events.length > 0
       // Delete all events (cascades to attendance)
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('events')
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000')
+        .select('id')
 
       if (error) {
         alert('Could not clear sessions: ' + error.message)
+      } else if (hadEvents && (!data || data.length === 0)) {
+        alert(
+          'Sessions were not deleted in the database (permission blocked). Please ensure the Principal delete policy in supabase/migrations/05_production_security_hardening.sql has been applied in your Supabase SQL Editor.'
+        )
       } else {
         setEvents([])
         setShowClearAllModal(false)

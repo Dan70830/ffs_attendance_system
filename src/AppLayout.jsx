@@ -159,6 +159,31 @@ export default function AppLayout({
                 )}
               </button>
 
+              {/* Groups (Principals & Teachers) */}
+              <button
+                type="button"
+                onClick={() => handleNav('manage-groups')}
+                className={`flex w-full min-h-[42px] items-center justify-between rounded-xl px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
+                  isGroupsActive
+                    ? 'bg-brand/10 text-brand'
+                    : 'text-ink/70 hover:bg-mist hover:text-ink'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <LayersIcon className="h-4 w-4 text-inherit" />
+                  <span>Groups</span>
+                </div>
+                {counts.groups !== undefined && counts.groups > 0 && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                      isGroupsActive ? 'bg-brand/15 text-brand' : 'bg-mist text-ink/60'
+                    }`}
+                  >
+                    {counts.groups}
+                  </span>
+                )}
+              </button>
+
               {/* Principal-only routes */}
               {isPrincipal && (
                 <>
@@ -178,30 +203,6 @@ export default function AppLayout({
                     {counts.pendingTeachers > 0 && (
                       <span className="rounded-full bg-amber-500 text-white text-[10px] font-black px-2 py-0.5">
                         {counts.pendingTeachers}
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleNav('manage-groups')}
-                    className={`flex w-full min-h-[42px] items-center justify-between rounded-xl px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
-                      isGroupsActive
-                        ? 'bg-brand/10 text-brand'
-                        : 'text-ink/70 hover:bg-mist hover:text-ink'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <LayersIcon className="h-4 w-4 text-inherit" />
-                      <span>Groups</span>
-                    </div>
-                    {counts.groups !== undefined && counts.groups > 0 && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-                          isGroupsActive ? 'bg-brand/15 text-brand' : 'bg-mist text-ink/60'
-                        }`}
-                      >
-                        {counts.groups}
                       </span>
                     )}
                   </button>
@@ -424,6 +425,24 @@ export default function AppLayout({
                   )}
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => handleNav('manage-groups')}
+                  className={`flex w-full min-h-[42px] items-center justify-between rounded-xl px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+                    isGroupsActive ? 'bg-brand/10 text-brand' : 'hover:bg-mist text-ink/75'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <LayersIcon className="h-4 w-4" />
+                    <span>Student Groups</span>
+                  </div>
+                  {counts.groups !== undefined && counts.groups > 0 && (
+                    <span className="rounded-full bg-mist px-2 py-0.5 text-[10px] font-extrabold text-ink/60">
+                      {counts.groups}
+                    </span>
+                  )}
+                </button>
+
                 {isPrincipal && (
                   <>
                     <button
@@ -440,24 +459,6 @@ export default function AppLayout({
                       {counts.pendingTeachers > 0 && (
                         <span className="rounded-full bg-amber-500 text-white text-[10px] font-black px-2 py-0.5">
                           {counts.pendingTeachers}
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleNav('manage-groups')}
-                      className={`flex w-full min-h-[42px] items-center justify-between rounded-xl px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
-                        isGroupsActive ? 'bg-brand/10 text-brand' : 'hover:bg-mist text-ink/75'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <LayersIcon className="h-4 w-4" />
-                        <span>Student Groups</span>
-                      </div>
-                      {counts.groups !== undefined && counts.groups > 0 && (
-                        <span className="rounded-full bg-mist px-2 py-0.5 text-[10px] font-extrabold text-ink/60">
-                          {counts.groups}
                         </span>
                       )}
                     </button>

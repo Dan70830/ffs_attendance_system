@@ -26,7 +26,8 @@ const PALETTE = [
   { name: 'Cyan', hex: '#0e7490' },
 ]
 
-export default function ManageGroups({ onBack }) {
+export default function ManageGroups({ profile, onBack }) {
+  const isPrincipal = profile?.role === 'principal'
   const [groups, setGroups] = useState([])
   const [students, setStudents] = useState([])
   const [teachers, setTeachers] = useState([])
@@ -482,14 +483,16 @@ export default function ManageGroups({ onBack }) {
                       >
                         <EditIcon className="h-4 w-4" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteModalGroup(g)}
-                        title="Delete group"
-                        className="rounded-lg p-2 text-red hover:bg-red/10 hover:text-red transition-colors cursor-pointer"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      {isPrincipal && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteModalGroup(g)}
+                          title="Delete group"
+                          className="rounded-lg p-2 text-red hover:bg-red/10 hover:text-red transition-colors cursor-pointer"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
